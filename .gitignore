@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ai
+.claude/
+CLAUDE.md
+AGENTS.md
+.cursorrules
+.cursor/
+.github/copilot
+.aider*
+.codeium/
+.continue/
+.bolt/
+.v0/
+docs/superpowers/
