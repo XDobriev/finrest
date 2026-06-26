@@ -1,0 +1,25 @@
+{
+  "venues": [
+    {
+      "id": "venue-1",
+      "name": "Ресторан «Оливье»",
+      "address": "ул. Пушкина, д. 10",
+      "createdAt": "2025-01-15T10:00:00Z"
+    },
+    {
+      "id": "venue-2",
+      "name": "Кафе «Бистро»",
+      "address": "пр. Мира, д. 25",
+      "createdAt": "2025-02-01T10:00:00Z"
+    },
+    {
+      "id": "venue-3",
+      "name": "Бар «Коктейль»",
+      "address": "ул. Ленина, д. 5",
+      "createdAt": "2025-03-10T10:00:00Z"
+    }
+  ],
+  "transactions": [],
+  "deduplicationPairs": [],
+  "fileUploads": []
+}
