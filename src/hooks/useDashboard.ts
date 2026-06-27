@@ -6,11 +6,15 @@ import type { DailyMetric, CategoryBreakdown, DashboardMetrics } from '@/types'
 import { CATEGORY_LABELS, CATEGORY_COLORS, type ExpenseCategory } from '@/types'
 
 export function useDashboard() {
-  const { transactions, selectedVenueId } = useApp()
+  const { transactions, selectedVenueId, dateRange } = useApp()
 
   const venueTransactions = useMemo(
-    () => transactions.filter((t) => t.venueId === selectedVenueId),
-    [transactions, selectedVenueId]
+    () => transactions.filter((t) => {
+      if (t.venueId !== selectedVenueId) return false
+      if (t.date < dateRange.from || t.date > dateRange.to) return false
+      return true
+    }),
+    [transactions, selectedVenueId, dateRange]
   )
 
   const metrics = useMemo<DashboardMetrics>(() => {

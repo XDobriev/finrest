@@ -30,7 +30,7 @@ type SortField = 'date' | 'amount' | 'counterparty' | 'source'
 type SortDir = 'asc' | 'desc'
 
 export default function TransactionsPage() {
-  const { transactions, selectedVenueId } = useApp()
+  const { transactions, selectedVenueId, dateRange } = useApp()
 
   const [search, setSearch] = useState('')
   const [sortField, setSortField] = useState<SortField>('date')
@@ -42,8 +42,12 @@ export default function TransactionsPage() {
   const pageSize = 15
 
   const venueTransactions = useMemo(
-    () => transactions.filter((t) => t.venueId === selectedVenueId),
-    [transactions, selectedVenueId]
+    () => transactions.filter((t) => {
+      if (t.venueId !== selectedVenueId) return false
+      if (t.date < dateRange.from || t.date > dateRange.to) return false
+      return true
+    }),
+    [transactions, selectedVenueId, dateRange]
   )
 
   const filtered = useMemo(() => {

@@ -26,12 +26,12 @@ import {
 import { BarChart3, TrendingUp, PieChartIcon } from 'lucide-react'
 
 export default function AnalyticsPage() {
-  const { transactions, selectedVenueId } = useApp()
+  const { transactions, selectedVenueId, dateRange } = useApp()
   const { dailyMetrics, categoryBreakdown, metrics } = useDashboard()
 
   // Source breakdown
   const sourceBreakdown = useMemo(() => {
-    const venueTx = transactions.filter((t) => t.venueId === selectedVenueId && t.type === 'expense' && t.status !== 'duplicate')
+    const venueTx = transactions.filter((t) => t.venueId === selectedVenueId && t.type === 'expense' && t.status !== 'duplicate' && t.date >= dateRange.from && t.date <= dateRange.to)
     const sourceMap = new Map<DataSource, number>()
     let total = 0
 
@@ -49,15 +49,15 @@ export default function AnalyticsPage() {
         label: SOURCE_LABELS[source],
       }))
       .sort((a, b) => b.amount - a.amount)
-  }, [transactions, selectedVenueId])
+  }, [transactions, selectedVenueId, dateRange])
 
   // Top 5 expenses
   const topExpenses = useMemo(() => {
     return transactions
-      .filter((t) => t.venueId === selectedVenueId && t.type === 'expense' && t.status !== 'duplicate')
+      .filter((t) => t.venueId === selectedVenueId && t.type === 'expense' && t.status !== 'duplicate' && t.date >= dateRange.from && t.date <= dateRange.to)
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5)
-  }, [transactions, selectedVenueId])
+  }, [transactions, selectedVenueId, dateRange])
 
   // Stacked bar data by source per day
   const stackedBarData = useMemo(() => {
@@ -65,7 +65,7 @@ export default function AnalyticsPage() {
     const dateMap = new Map<string, Record<string, number>>()
 
     transactions
-      .filter((t) => t.venueId === selectedVenueId && t.type === 'expense' && t.status !== 'duplicate')
+      .filter((t) => t.venueId === selectedVenueId && t.type === 'expense' && t.status !== 'duplicate' && t.date >= dateRange.from && t.date <= dateRange.to)
       .forEach((t) => {
         const existing = dateMap.get(t.date) || {}
         existing[t.source] = (existing[t.source] || 0) + t.amount
@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
         date: new Date(date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
         ...sourcesMap,
       }))
-  }, [transactions, selectedVenueId])
+  }, [transactions, selectedVenueId, dateRange])
 
   const sourceColors: Record<DataSource, string> = {
     iiko: '#3B82F6',
