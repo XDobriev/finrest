@@ -1,6 +1,7 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useCallback, useMemo } from 'react'
+import { useLocalStorage } from '@/hooks/useLocalStorage'
 import {
   Transaction,
   Venue,
@@ -8,6 +9,9 @@ import {
   FileUpload,
   DeduplicationLogEntry,
   DeduplicationSettings,
+  DateRange,
+  InventoryItem,
+  CashBalances,
 } from '@/types'
 import {
   mockTransactions,
@@ -40,17 +44,43 @@ interface AppState {
 
   addFileUpload: (upload: Omit<FileUpload, 'id' | 'uploadedAt'>) => void
   updateDeduplicationSettings: (venueId: string, settings: DeduplicationSettings) => void
+
+  dateRange: DateRange
+  setDateRange: (range: DateRange) => void
+
+  cashBalances: CashBalances
+  setCashBalance: (venueId: string, monthKey: string, amount: number) => void
+
+  inventory: InventoryItem[]
+  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'createdAt'>) => void
+  updateInventoryItem: (id: string, data: Partial<InventoryItem>) => void
+  deleteInventoryItem: (id: string) => void
+
+  exportAllData: () => string
+  importAllData: (json: string) => boolean
+  resetAllData: () => void
 }
 
 const AppContext = createContext<AppState | null>(null)
 
+function getDefaultDateRange(): DateRange {
+  const now = new Date()
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  return { from, to }
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [venues, setVenues] = useState<Venue[]>(mockVenues)
-  const [selectedVenueId, setSelectedVenueId] = useState<string>(mockVenues[0].id)
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions)
-  const [deduplicationPairs, setDeduplicationPairs] = useState<DeduplicationPair[]>(mockDeduplicationPairs)
-  const [fileUploads, setFileUploads] = useState<FileUpload[]>(mockFileUploads)
-  const [deduplicationLog, setDeduplicationLog] = useState<DeduplicationLogEntry[]>(mockDeduplicationLog)
+  const [venues, setVenues] = useLocalStorage<Venue[]>('finrest_venues', mockVenues)
+  const [selectedVenueId, setSelectedVenueId] = useLocalStorage<string>('finrest_selected_venue', mockVenues[0].id)
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>('finrest_transactions', mockTransactions)
+  const [deduplicationPairs, setDeduplicationPairs] = useLocalStorage<DeduplicationPair[]>('finrest_dedup_pairs', mockDeduplicationPairs)
+  const [fileUploads, setFileUploads] = useLocalStorage<FileUpload[]>('finrest_file_uploads', mockFileUploads)
+  const [deduplicationLog, setDeduplicationLog] = useLocalStorage<DeduplicationLogEntry[]>('finrest_dedup_log', mockDeduplicationLog)
+
+  const [dateRange, setDateRange] = useLocalStorage<DateRange>('finrest_date_range', getDefaultDateRange())
+  const [cashBalances, setCashBalances] = useLocalStorage<CashBalances>('finrest_cash_balances', {})
+  const [inventory, setInventory] = useLocalStorage<InventoryItem[]>('finrest_inventory', [])
 
   const selectVenue = useCallback((venueId: string) => {
     setSelectedVenueId(venueId)
@@ -216,6 +246,80 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   )
 
+  const setCashBalance = useCallback((venueId: string, monthKey: string, amount: number) => {
+    setCashBalances(prev => ({
+      ...prev,
+      [venueId]: {
+        ...(prev[venueId] || {}),
+        [monthKey]: amount,
+      },
+    }))
+  }, [setCashBalances])
+
+  const addInventoryItem = useCallback((item: Omit<InventoryItem, 'id' | 'createdAt'>) => {
+    const newItem: InventoryItem = {
+      ...item,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    }
+    setInventory(prev => [...prev, newItem])
+  }, [setInventory])
+
+  const updateInventoryItem = useCallback((id: string, data: Partial<InventoryItem>) => {
+    setInventory(prev => prev.map(item => item.id === id ? { ...item, ...data } : item))
+  }, [setInventory])
+
+  const deleteInventoryItem = useCallback((id: string) => {
+    setInventory(prev => prev.filter(item => item.id !== id))
+  }, [setInventory])
+
+  const exportAllData = useCallback((): string => {
+    const data = {
+      venues,
+      selectedVenueId,
+      transactions,
+      deduplicationPairs,
+      fileUploads,
+      deduplicationLog,
+      dateRange,
+      cashBalances,
+      inventory,
+      exportedAt: new Date().toISOString(),
+    }
+    return JSON.stringify(data, null, 2)
+  }, [venues, selectedVenueId, transactions, deduplicationPairs, fileUploads, deduplicationLog, dateRange, cashBalances, inventory])
+
+  const importAllData = useCallback((json: string): boolean => {
+    try {
+      const data = JSON.parse(json)
+      if (!data.venues || !data.transactions) return false
+      setVenues(data.venues)
+      setSelectedVenueId(data.selectedVenueId || data.venues[0]?.id || '')
+      setTransactions(data.transactions)
+      setDeduplicationPairs(data.deduplicationPairs || [])
+      setFileUploads(data.fileUploads || [])
+      setDeduplicationLog(data.deduplicationLog || [])
+      setDateRange(data.dateRange || getDefaultDateRange())
+      setCashBalances(data.cashBalances || {})
+      setInventory(data.inventory || [])
+      return true
+    } catch {
+      return false
+    }
+  }, [setVenues, setSelectedVenueId, setTransactions, setDeduplicationPairs, setFileUploads, setDeduplicationLog, setDateRange, setCashBalances, setInventory])
+
+  const resetAllData = useCallback(() => {
+    setVenues(mockVenues)
+    setSelectedVenueId(mockVenues[0].id)
+    setTransactions(mockTransactions)
+    setDeduplicationPairs(mockDeduplicationPairs)
+    setFileUploads(mockFileUploads)
+    setDeduplicationLog([])
+    setDateRange(getDefaultDateRange())
+    setCashBalances({})
+    setInventory([])
+  }, [setVenues, setSelectedVenueId, setTransactions, setDeduplicationPairs, setFileUploads, setDeduplicationLog, setDateRange, setCashBalances, setInventory])
+
   const value = useMemo(
     () => ({
       venues,
@@ -234,6 +338,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       runDeduplication,
       addFileUpload,
       updateDeduplicationSettings,
+      dateRange,
+      setDateRange,
+      cashBalances,
+      setCashBalance,
+      inventory,
+      addInventoryItem,
+      updateInventoryItem,
+      deleteInventoryItem,
+      exportAllData,
+      importAllData,
+      resetAllData,
     }),
     [
       venues,
@@ -252,6 +367,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       runDeduplication,
       addFileUpload,
       updateDeduplicationSettings,
+      dateRange,
+      setDateRange,
+      cashBalances,
+      setCashBalance,
+      inventory,
+      addInventoryItem,
+      updateInventoryItem,
+      deleteInventoryItem,
+      exportAllData,
+      importAllData,
+      resetAllData,
     ]
   )
 
