@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useApp } from '@/context/AppContext'
-import { Settings as SettingsIcon, Sliders, History, User, Shield, Save } from 'lucide-react'
+import { Settings as SettingsIcon, Sliders, History, User, Shield, Save, Download, Upload, AlertTriangle } from 'lucide-react'
 
 export default function SettingsPage() {
   const {
@@ -17,6 +17,9 @@ export default function SettingsPage() {
     selectedVenueId,
     updateDeduplicationSettings,
     deduplicationLog,
+    exportAllData,
+    importAllData,
+    resetAllData,
   } = useApp()
 
   const venue = venues.find((v) => v.id === selectedVenueId)
@@ -184,6 +187,83 @@ export default function SettingsPage() {
                 <Input value="1 234 567,89 ₽" readOnly className="bg-slate-50" />
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Data Management */}
+        <Card className="rounded-lg shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-slate-500" />
+              <CardTitle className="text-base font-semibold text-slate-900">
+                Управление данными
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  const json = exportAllData()
+                  const blob = new Blob([json], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = `finrest_backup_${new Date().toISOString().split('T')[0]}.json`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }}
+              >
+                <Download className="h-4 w-4" />
+                Экспортировать данные
+              </Button>
+
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  const input = document.createElement('input')
+                  input.type = 'file'
+                  input.accept = '.json'
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = () => {
+                      const success = importAllData(reader.result as string)
+                      if (success) {
+                        alert('Данные успешно импортированы')
+                      } else {
+                        alert('Ошибка: неверный формат файла')
+                      }
+                    }
+                    reader.readAsText(file)
+                  }
+                  input.click()
+                }}
+              >
+                <Upload className="h-4 w-4" />
+                Импортировать данные
+              </Button>
+
+              <Button
+                variant="outline"
+                className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  if (confirm('Все данные будут удалены и заменены демо-данными. Продолжить?')) {
+                    resetAllData()
+                  }
+                }}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Сбросить все данные
+              </Button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Экспорт сохраняет все данные (транзакции, заведения, инвентаризацию, настройки) в JSON-файл.
+            </p>
           </CardContent>
         </Card>
 
