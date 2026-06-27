@@ -135,3 +135,66 @@ export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   marketing: '#F97316',
   other: '#6B7280',
 }
+
+export interface DateRange {
+  from: string // ISO date "YYYY-MM-DD"
+  to: string   // ISO date "YYYY-MM-DD"
+}
+
+export interface InventoryItem {
+  id: string
+  venueId: string
+  period: string          // "YYYY-MM"
+  category: ExpenseCategory
+  name: string
+  unit: string            // кг, л, шт
+  expectedQty: number
+  actualQty: number
+  pricePerUnit: number
+  createdAt: string
+}
+
+export type CashBalances = Record<string, Record<string, number>>
+// cashBalances[venueId]["YYYY-MM"] = amount
+
+export interface PIOReportData {
+  revenue: {
+    items: { label: string; amount: number }[]
+    total: number
+  }
+  costOfGoods: {
+    items: { category: ExpenseCategory; label: string; amount: number }[]
+    total: number
+  }
+  grossProfit: number
+  grossMargin: number
+  operatingExpenses: {
+    items: { category: ExpenseCategory; label: string; amount: number }[]
+    total: number
+  }
+  operatingProfit: number
+  otherExpenses: {
+    items: { category: ExpenseCategory; label: string; amount: number }[]
+    total: number
+  }
+  netProfit: number
+  netMargin: number
+}
+
+export interface DDSReportData {
+  openingBalance: number
+  receipts: {
+    items: { label: string; amount: number }[]
+    total: number
+  }
+  payments: {
+    groups: {
+      label: string
+      items: { label: string; amount: number }[]
+      total: number
+    }[]
+    total: number
+  }
+  netCashFlow: number
+  closingBalance: number
+}
