@@ -12,14 +12,11 @@ export function fuzzyMatch(str1: string, str2: string, threshold = 0.7): boolean
   if (s1.includes(s2) || s2.includes(s1)) return true
 
   // Fuzzy match with Fuse.js
-  const fuse = new Fuse([str1], {
+  const fuse = new Fuse([{ value: str2 }], {
     threshold,
     includeScore: true,
     keys: ['value'],
   })
-
-  const fuseStr2 = [{ value: str2 }]
-  fuse.setCollection(fuseStr2)
 
   const results = fuse.search(str1)
   return results.length > 0 && (results[0].score ?? 1) <= threshold

@@ -10,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useApp } from '@/context/AppContext'
 import { generateId } from '@/lib/utils'
 import { format } from 'date-fns'
-import type { DataSource, ParsedRow } from '@/lib/parsers'
-import type { ParseResult } from '@/lib/parsers'
+import type { DataSource } from '@/types'
+import type { ParsedRow, ParseResult } from '@/lib/parsers'
 import { Upload, CheckCircle2, History } from 'lucide-react'
 
 const sources: DataSource[] = ['iiko', 'bank', 'admin', 'manual']
