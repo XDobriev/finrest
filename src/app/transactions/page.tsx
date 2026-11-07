@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Header } from '@/components/layout/Header'
 import {
   Table,
@@ -13,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -22,15 +24,15 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { useApp } from '@/context/AppContext'
-import { formatCurrency, getSourceColor, getStatusColor } from '@/lib/utils'
+import { formatCurrency, getSourceColor } from '@/lib/utils'
 import { SOURCE_LABELS, CATEGORY_LABELS } from '@/types'
-import { ArrowUpRight, ArrowDownRight, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, Search, ChevronLeft, ChevronRight, UploadCloud, RotateCcw } from 'lucide-react'
 
 type SortField = 'date' | 'amount' | 'counterparty' | 'source'
 type SortDir = 'asc' | 'desc'
 
 export default function TransactionsPage() {
-  const { transactions, selectedVenueId, dateRange } = useApp()
+  const { transactions, selectedVenueId, dateRange, isLoading } = useApp()
 
   const [search, setSearch] = useState('')
   const [sortField, setSortField] = useState<SortField>('date')
@@ -119,10 +121,10 @@ export default function TransactionsPage() {
           <Badge variant="secondary" className="text-sm font-medium">
             {filtered.length} записей
           </Badge>
-          <Badge className="bg-emerald-600">
+          <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">
             {venueTransactions.filter((t) => t.type === 'income').length} доходов
           </Badge>
-          <Badge className="bg-red-600">
+          <Badge className="bg-red-100 text-red-800 border border-red-300">
             {venueTransactions.filter((t) => t.type === 'expense').length} расходов
           </Badge>
         </div>
@@ -133,7 +135,7 @@ export default function TransactionsPage() {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex-1 min-w-[200px] max-w-sm">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <Input
                     placeholder="Поиск по контрагенту или сумме..."
                     value={search}
@@ -191,12 +193,18 @@ export default function TransactionsPage() {
                     <TableHead
                       className="cursor-pointer select-none hover:bg-slate-100"
                       onClick={() => handleSort('date')}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Сортировать по дате"
                     >
                       Дата {sortField === 'date' && (sortDir === 'desc' ? '↓' : '↑')}
                     </TableHead>
                     <TableHead
                       className="cursor-pointer select-none hover:bg-slate-100"
                       onClick={() => handleSort('counterparty')}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Сортировать по контрагенту"
                     >
                       Контрагент {sortField === 'counterparty' && (sortDir === 'desc' ? '↓' : '↑')}
                     </TableHead>
@@ -205,12 +213,18 @@ export default function TransactionsPage() {
                     <TableHead
                       className="cursor-pointer select-none hover:bg-slate-100"
                       onClick={() => handleSort('amount')}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Сортировать по сумме"
                     >
                       Сумма {sortField === 'amount' && (sortDir === 'desc' ? '↓' : '↑')}
                     </TableHead>
                     <TableHead
                       className="cursor-pointer select-none hover:bg-slate-100"
                       onClick={() => handleSort('source')}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Сортировать по источнику"
                     >
                       Источник {sortField === 'source' && (sortDir === 'desc' ? '↓' : '↑')}
                     </TableHead>
@@ -228,9 +242,9 @@ export default function TransactionsPage() {
                           }}
                         >
                           {tx.type === 'income' ? (
-                            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
+                            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-700" />
                           ) : (
-                            <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+                            <ArrowDownRight className="h-3.5 w-3.5 text-red-600" />
                           )}
                         </div>
                       </TableCell>
@@ -240,17 +254,17 @@ export default function TransactionsPage() {
                       <TableCell className="text-sm text-slate-700 font-medium">
                         {tx.counterparty}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-slate-500 max-w-[200px] truncate">
+                      <TableCell className="hidden md:table-cell text-sm text-slate-600 max-w-[200px] truncate">
                         {tx.description}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        <Badge variant="secondary" className="text-[10px]">
+                        <Badge variant="secondary" className="text-xs">
                           {CATEGORY_LABELS[tx.category]}
                         </Badge>
                       </TableCell>
                       <TableCell
-                        className={`text-sm font-mono font-semibold ${
-                          tx.type === 'income' ? 'text-emerald-600' : 'text-red-500'
+                        className={`text-sm font-mono tabular-nums font-semibold ${
+                          tx.type === 'income' ? 'text-emerald-700' : 'text-red-600'
                         }`}
                       >
                         {tx.type === 'income' ? '+' : '-'}
@@ -259,9 +273,9 @@ export default function TransactionsPage() {
                       <TableCell>
                         <Badge
                           variant="secondary"
-                          className="text-[10px]"
+                          className="text-xs font-medium"
                           style={{
-                            backgroundColor: `${getSourceColor(tx.source)}15`,
+                            backgroundColor: `${getSourceColor(tx.source)}20`,
                             color: getSourceColor(tx.source),
                           }}
                         >
@@ -270,11 +284,13 @@ export default function TransactionsPage() {
                       </TableCell>
                       <TableCell>
                         <span
-                          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                          style={{
-                            backgroundColor: `${getStatusColor(tx.status)}15`,
-                            color: getStatusColor(tx.status),
-                          }}
+                          className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
+                            tx.status === 'unique'
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                              : tx.status === 'duplicate'
+                              ? 'bg-red-100 text-red-800 border-red-300'
+                              : 'bg-amber-100 text-amber-900 border-amber-300'
+                          }`}
                         >
                           {tx.status === 'duplicate' && '✗ '}
                           {tx.status === 'unique' && '✓ '}
@@ -283,15 +299,63 @@ export default function TransactionsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {paginated.length === 0 && (
+
+                  {isLoading && (
+                    [...Array(6)].map((_, i) => (
+                      <TableRow key={`skeleton-${i}`}>
+                        <TableCell><Skeleton className="h-7 w-7 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40" /></TableCell>
+                        <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                      </TableRow>
+                    ))
+                  )}
+
+                  {!isLoading && paginated.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                        <div className="flex flex-col items-center justify-center space-y-2">
-                          <Search className="h-8 w-8 text-slate-300" />
-                          <p className="text-sm font-medium text-slate-700">Транзакции не найдены</p>
-                          <p className="text-xs text-slate-400 max-w-sm">
-                            Попробуйте сбросить фильтры или загрузите выписку на странице загрузки
+                      <TableCell colSpan={8} className="text-center py-12 text-slate-600">
+                        <div className="flex flex-col items-center justify-center space-y-3 max-w-sm mx-auto">
+                          <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center">
+                            <Search className="h-6 w-6 text-slate-500" />
+                          </div>
+                          <p className="text-base font-semibold text-slate-900">
+                            {venueTransactions.length === 0
+                              ? 'Нет транзакций за выбранный период'
+                              : 'Ничего не найдено'}
                           </p>
+                          <p className="text-xs text-slate-600">
+                            {venueTransactions.length === 0
+                              ? 'Загрузите банковскую выписку или данные из iiko, чтобы увидеть операции ресторана.'
+                              : 'Попробуйте сбросить параметры поиска и фильтрации.'}
+                          </p>
+                          {venueTransactions.length === 0 ? (
+                            <Link
+                              href="/upload"
+                              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 text-xs shadow-sm transition-colors mt-2"
+                            >
+                              <UploadCloud className="h-3.5 w-3.5" />
+                              Загрузить выписку
+                            </Link>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSearch('')
+                                setSourceFilter('all')
+                                setStatusFilter('all')
+                                setCategoryFilter('all')
+                              }}
+                              className="gap-1.5 text-xs text-slate-700"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              Сбросить фильтры
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -305,7 +369,7 @@ export default function TransactionsPage() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-600">
               Страница {page} из {totalPages} ({filtered.length} записей)
             </p>
             <div className="flex items-center gap-2">
@@ -314,6 +378,7 @@ export default function TransactionsPage() {
                 size="sm"
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
+                aria-label="Предыдущая страница"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -322,6 +387,7 @@ export default function TransactionsPage() {
                 size="sm"
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => p + 1)}
+                aria-label="Следующая страница"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>

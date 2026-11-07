@@ -83,6 +83,11 @@ export interface DashboardMetrics {
   revenueTrend: number // percent change
   expenseTrend: number
   profitTrend: number
+  // Restaurant vital metrics
+  foodCostAmount: number
+  foodCostPercent: number
+  payrollAmount: number
+  payrollPercent: number
 }
 
 export interface DailyMetric {
@@ -157,7 +162,7 @@ export interface InventoryItem {
 export type CashBalances = Record<string, Record<string, number>>
 // cashBalances[venueId]["YYYY-MM"] = amount
 
-export interface PIOReportData {
+export interface OPiUReportData {
   revenue: {
     items: { label: string; amount: number }[]
     total: number
@@ -180,6 +185,8 @@ export interface PIOReportData {
   netProfit: number
   netMargin: number
 }
+
+export type PIOReportData = OPiUReportData
 
 export interface DDSReportData {
   openingBalance: number

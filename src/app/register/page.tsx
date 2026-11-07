@@ -208,7 +208,7 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
 
-        <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-slate-500">
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-400">
           <Shield className="h-3.5 w-3.5 text-emerald-500/70" />
           <span>Данные заведений защищены и хранятся в РФ (152-ФЗ)</span>
         </div>

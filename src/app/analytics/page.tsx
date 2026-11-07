@@ -1,9 +1,11 @@
 'use client'
 
 import React, { useMemo } from 'react'
+import Link from 'next/link'
 import { Header } from '@/components/layout/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useApp } from '@/context/AppContext'
 import { useDashboard } from '@/hooks/useDashboard'
 import { formatCurrency } from '@/lib/utils'
@@ -23,11 +25,11 @@ import {
   LineChart,
   Line,
 } from 'recharts'
-import { BarChart3, TrendingUp, PieChartIcon } from 'lucide-react'
+import { BarChart3, TrendingUp, PieChartIcon, UploadCloud, FileQuestion } from 'lucide-react'
 
 export default function AnalyticsPage() {
   const { transactions, selectedVenueId, dateRange } = useApp()
-  const { dailyMetrics, categoryBreakdown } = useDashboard()
+  const { dailyMetrics, categoryBreakdown, isLoading } = useDashboard()
 
   // Source breakdown
   const sourceBreakdown = useMemo(() => {
@@ -93,20 +95,68 @@ export default function AnalyticsPage() {
     fontSize: '12px',
   }
 
+  const hasData = transactions.some(
+    (t) => t.venueId === selectedVenueId && t.date >= dateRange.from && t.date <= dateRange.to
+  )
+
   return (
     <div>
       <Header title="Аналитика" onMenuToggle={() => {}} />
       <main className="p-6 space-y-6">
-        {/* Source comparison (stacked bar) */}
-        <Card className="rounded-lg shadow-sm">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-slate-500" />
-              <CardTitle className="text-base font-semibold text-slate-900">
-                Расходы по источникам (по дням)
-              </CardTitle>
+        {isLoading ? (
+          <div className="space-y-6">
+            <Card className="p-5">
+              <Skeleton className="h-6 w-56 mb-4" />
+              <Skeleton className="h-[320px] w-full rounded-lg" />
+            </Card>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Card className="p-5">
+                <Skeleton className="h-6 w-48 mb-4" />
+                <Skeleton className="h-[280px] w-full rounded-lg" />
+              </Card>
+              <Card className="p-5">
+                <Skeleton className="h-6 w-48 mb-4" />
+                <Skeleton className="h-[280px] w-full rounded-lg" />
+              </Card>
             </div>
-          </CardHeader>
+            <Card className="p-5">
+              <Skeleton className="h-6 w-44 mb-4" />
+              <Skeleton className="h-[280px] w-full rounded-lg" />
+            </Card>
+          </div>
+        ) : !hasData ? (
+          <Card className="rounded-xl shadow-sm border-dashed border-2">
+            <CardContent className="p-12 text-center">
+              <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <FileQuestion className="h-6 w-6 text-slate-500" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900 mb-1">
+                Нет данных для аналитики за выбранный период
+              </h3>
+              <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
+                Загрузите выписку из банка или данные продаж из iiko, чтобы увидеть динамику расходов и разбивку по категориям.
+              </p>
+              <Link
+                href="/upload"
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 text-sm shadow-sm transition-colors"
+              >
+                <UploadCloud className="h-4 w-4" />
+                Загрузить выписку
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Source comparison (stacked bar) */}
+            <Card className="rounded-lg shadow-sm">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-slate-500" />
+                  <CardTitle className="text-base font-semibold text-slate-900">
+                    Расходы по источникам (по дням)
+                  </CardTitle>
+                </div>
+              </CardHeader>
           <CardContent className="pt-0">
             <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -187,7 +237,7 @@ export default function AnalyticsPage() {
             <CardContent className="pt-0">
               <div className="space-y-4 pt-2">
                 {sourceBreakdown.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-8 text-center">Нет расходов за выбранный период</p>
+                  <p className="text-xs text-slate-600 py-8 text-center">Нет расходов за выбранный период</p>
                 ) : (
                   sourceBreakdown.map((s) => (
                     <div key={s.source} className="space-y-1.5">
@@ -196,11 +246,11 @@ export default function AnalyticsPage() {
                           <Badge variant="outline" className="text-xs font-normal">
                             {s.label}
                           </Badge>
-                          <span className="text-xs text-slate-500 font-mono">
+                          <span className="text-xs text-slate-600 font-mono tabular-nums">
                             {s.percent.toFixed(1)}%
                           </span>
                         </div>
-                        <p className="text-sm font-semibold text-slate-900 font-mono">
+                        <p className="text-sm font-semibold text-slate-900 font-mono tabular-nums">
                           {formatCurrency(s.amount)}
                         </p>
                       </div>
@@ -240,15 +290,15 @@ export default function AnalyticsPage() {
                     <div key={tx.id} className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600 font-mono tabular-nums">
                             {i + 1}
                           </span>
                           <div>
                             <p className="text-sm font-medium text-slate-900 truncate max-w-[140px]">{tx.counterparty}</p>
-                            <p className="text-xs text-slate-500">{new Date(tx.date).toLocaleDateString('ru-RU')}</p>
+                            <p className="text-xs text-slate-600">{new Date(tx.date).toLocaleDateString('ru-RU')}</p>
                           </div>
                         </div>
-                        <p className="text-sm font-semibold text-red-500 font-mono">
+                        <p className="text-sm font-semibold text-red-600 font-mono tabular-nums">
                           {formatCurrency(tx.amount)}
                         </p>
                       </div>
@@ -293,7 +343,9 @@ export default function AnalyticsPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
-  )
+      </>
+    )}
+  </main>
+</div>
+)
 }

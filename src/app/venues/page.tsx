@@ -109,91 +109,112 @@ export default function VenuesPage() {
         </Card>
 
         {/* Venue list */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {venues.map((venue) => {
-            const stats = getVenueStats(venue.id)
-            const isActive = selectedVenueId === venue.id
+        {venues.length === 0 ? (
+          <Card className="rounded-lg shadow-sm border-dashed">
+            <CardContent className="p-10 text-center">
+              <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                <Building2 className="h-6 w-6 text-slate-500" />
+              </div>
+              <p className="text-base font-semibold text-slate-900">Список заведений пуст</p>
+              <p className="text-sm text-slate-600 mt-1 max-w-sm mx-auto">
+                Создайте ваше первое заведение в форме выше, чтобы начать вести управленческий учёт ресторана.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {venues.map((venue) => {
+              const stats = getVenueStats(venue.id)
+              const isActive = selectedVenueId === venue.id
 
-            return (
-              <Card
-                key={venue.id}
-                className={`rounded-lg shadow-sm cursor-pointer transition-all ${
-                  isActive ? 'ring-2 ring-emerald-500 bg-emerald-50/30' : 'hover:shadow-md'
-                }`}
-                onClick={() => selectVenue(venue.id)}
-              >
-                <CardContent className="p-5 space-y-4">
-                  {/* Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-emerald-600" />
-                        <h3 className="font-semibold text-slate-900">{venue.name}</h3>
-                      </div>
-                      {venue.address && (
-                        <div className="flex items-center gap-1 text-xs text-slate-500">
-                          <MapPin className="h-3 w-3" />
-                          {venue.address}
+              return (
+                <Card
+                  key={venue.id}
+                  className={`rounded-lg shadow-sm cursor-pointer transition-all ${
+                    isActive ? 'ring-2 ring-emerald-500 bg-emerald-50/30' : 'hover:shadow-md'
+                  }`}
+                  onClick={() => selectVenue(venue.id)}
+                >
+                  <CardContent className="p-5 space-y-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-emerald-600" />
+                          <h3 className="font-semibold text-slate-900">{venue.name}</h3>
                         </div>
+                        {venue.address && (
+                          <div className="flex items-center gap-1 text-xs text-slate-600">
+                            <MapPin className="h-3 w-3" />
+                            {venue.address}
+                          </div>
+                        )}
+                      </div>
+                      {isActive && (
+                        <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">Активно</Badge>
                       )}
                     </div>
-                    {isActive && (
-                      <Badge className="bg-emerald-600">Активно</Badge>
-                    )}
-                  </div>
 
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg bg-blue-50 p-2.5">
-                      <p className="text-[10px] text-blue-600 font-medium">Доходы</p>
-                      <p className="text-sm font-bold text-blue-900">{formatCurrency(stats.income)}</p>
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-blue-50 p-2.5">
+                        <p className="text-xs text-blue-800 font-medium">Доходы</p>
+                        <p className="text-sm font-bold font-mono tabular-nums text-blue-900">{formatCurrency(stats.income)}</p>
+                      </div>
+                      <div className="rounded-lg bg-red-50 p-2.5">
+                        <p className="text-xs text-red-800 font-medium">Расходы</p>
+                        <p className="text-sm font-bold font-mono tabular-nums text-red-900">{formatCurrency(stats.expenses)}</p>
+                      </div>
                     </div>
-                    <div className="rounded-lg bg-red-50 p-2.5">
-                      <p className="text-[10px] text-red-600 font-medium">Расходы</p>
-                      <p className="text-sm font-bold text-red-900">{formatCurrency(stats.expenses)}</p>
-                    </div>
-                  </div>
 
-                  {/* Meta */}
-                  <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-border">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        <BarChart3 className="h-3 w-3" />
-                        {stats.totalTx} транзакций
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FileText className="h-3 w-3" />
-                        {stats.uploads} загрузок
-                      </span>
+                    {/* Meta */}
+                    <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-border">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1">
+                          <BarChart3 className="h-3.5 w-3.5 text-slate-500" />
+                          {stats.totalTx} транзакций
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <FileText className="h-3.5 w-3.5 text-slate-500" />
+                          {stats.uploads} загрузок
+                        </span>
+                      </div>
+                      {stats.duplicates > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {stats.duplicates} дублей
+                        </Badge>
+                      )}
                     </div>
-                    {stats.duplicates > 0 && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        {stats.duplicates} дублей
-                      </Badge>
-                    )}
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="outline" size="sm" className="gap-1 text-xs flex-1" onClick={() => handleEdit(venue.id)}>
-                      <Pencil className="h-3 w-3" />
-                      Изменить
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
-                      onClick={() => handleDelete(venue.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      Удалить
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-xs flex-1"
+                        onClick={() => handleEdit(venue.id)}
+                        aria-label={`Редактировать ${venue.name}`}
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Изменить
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
+                        onClick={() => handleDelete(venue.id)}
+                        aria-label={`Удалить ${venue.name}`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Удалить
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        )}
 
         {/* Edit dialog */}
         <Dialog open={!!editVenueId} onOpenChange={(open) => !open && setEditVenueId(null)}>

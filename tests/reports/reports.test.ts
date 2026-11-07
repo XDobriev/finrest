@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { calculatePIOReport } from '../../src/lib/reports/pio'
+import { calculateOPiUReport, calculatePIOReport } from '../../src/lib/reports/opiu'
 import { calculateDDSReport } from '../../src/lib/reports/dds'
 import type { Transaction, CashBalances } from '../../src/types'
 
@@ -91,11 +91,17 @@ const sampleTransactions: Transaction[] = [
   },
 ]
 
-test('Financial Engine: calculates P&L (ПИО) accurately', () => {
-  const pio = calculatePIOReport(sampleTransactions, 'v-1', {
+test('Financial Engine: calculates P&L (ОПиУ / P&L) accurately', () => {
+  const pio = calculateOPiUReport(sampleTransactions, 'v-1', {
     from: '2025-06-01',
     to: '2025-06-30',
   })
+  // Also verify backward compatible alias returns identical result
+  const pioAlias = calculatePIOReport(sampleTransactions, 'v-1', {
+    from: '2025-06-01',
+    to: '2025-06-30',
+  })
+  assert.equal(pio.revenue.total, pioAlias.revenue.total)
 
   // Total Revenue: 500,000
   assert.equal(pio.revenue.total, 500000)
@@ -145,3 +151,84 @@ test('Financial Engine: calculates Cash Flow (ДДС) with opening and closing b
   // Closing Balance: 100,000 + 100,000 = 200,000
   assert.equal(dds.closingBalance, 200000)
 })
+
+test('Financial Engine: calculates Restaurant Vital Metrics (Food Cost % and ФОТ %)', () => {
+  const filtered = sampleTransactions.filter((t) => t.status !== 'duplicate')
+  const revenue = filtered.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const foodCost = filtered
+    .filter((t) => t.type === 'expense' && (t.category === 'food' || t.category === 'bar'))
+    .reduce((s, t) => s + t.amount, 0)
+  const payroll = filtered
+    .filter((t) => t.type === 'expense' && t.category === 'salary')
+    .reduce((s, t) => s + t.amount, 0)
+
+  const foodCostPercent = (foodCost / revenue) * 100
+  const payrollPercent = (payroll / revenue) * 100
+
+  assert.equal(foodCost, 170000)
+  assert.equal(foodCostPercent, 34) // 170k / 500k = 34%
+  assert.equal(payroll, 150000)
+  assert.equal(payrollPercent, 30) // 150k / 500k = 30%
+})
+
+test('Financial Engine: ignores duplicate income in OPiU and vital metric calculations', () => {
+  const transactionsWithDupIncome: Transaction[] = [
+    ...sampleTransactions,
+    {
+      id: 'tx-dup-income',
+      venueId: 'v-1',
+      date: '2025-06-01',
+      amount: 500000,
+      counterparty: 'Гости ресторана',
+      description: 'Повторный импорт смены',
+      category: 'food',
+      source: 'bank',
+      status: 'duplicate',
+      type: 'income',
+      createdAt: '2025-06-01T21:00:00Z',
+    },
+  ]
+
+  const opiu = calculateOPiUReport(transactionsWithDupIncome, 'v-1', {
+    from: '2025-06-01',
+    to: '2025-06-30',
+  })
+
+  // Duplicate income of 500k MUST NOT be added
+  assert.equal(opiu.revenue.total, 500000)
+})
+
+test('Financial Engine: handles zero revenue safely without division by zero', () => {
+  const zeroRevenueTransactions = sampleTransactions.filter((t) => t.type !== 'income')
+  const opiu = calculateOPiUReport(zeroRevenueTransactions, 'v-1', {
+    from: '2025-06-01',
+    to: '2025-06-30',
+  })
+
+  assert.equal(opiu.revenue.total, 0)
+  assert.equal(opiu.grossMargin, 0)
+  assert.equal(opiu.netMargin, 0)
+})
+
+test('Financial Engine: DDS handles negative opening balance (overdraft) accurately', () => {
+  const cashBalances: CashBalances = {
+    'v-1': {
+      '2025-06': -50000,
+    },
+  }
+
+  const dds = calculateDDSReport(
+    sampleTransactions,
+    'v-1',
+    { from: '2025-06-01', to: '2025-06-30' },
+    cashBalances
+  )
+
+  assert.equal(dds.openingBalance, -50000)
+  // Net cash flow: +100,000
+  assert.equal(dds.netCashFlow, 100000)
+  // Closing balance: -50,000 + 100,000 = 50,000
+  assert.equal(dds.closingBalance, 50000)
+})
+
+

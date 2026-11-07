@@ -153,7 +153,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="font-semibold text-slate-900">Управляющий партнёр</p>
-                <p className="text-sm text-slate-500 font-mono">admin@finrest.ru</p>
+                <p className="text-sm text-slate-600 font-mono">admin@finrest.ru</p>
               </div>
             </div>
           </CardContent>
@@ -173,7 +173,7 @@ export default function SettingsPage() {
                 {venue?.name}
               </Badge>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               Автоматическая синхронизация кассовых смен, выручки и остатков блюд по iiko API
             </p>
           </CardHeader>
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                     Проверить
                   </Button>
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-slate-600">
                   Для тестовой среды введите <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">demo_restaurant</code>
                 </p>
               </div>
@@ -219,7 +219,7 @@ export default function SettingsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-slate-600">
                   ID: <span className="font-mono">{iikoOrgId}</span>
                 </p>
               </div>
@@ -242,7 +242,7 @@ export default function SettingsPage() {
                   Сохранить ключ
                 </Button>
                 {iikoSaved && (
-                  <Badge className="bg-emerald-600 text-white text-xs">
+                  <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs">
                     ✓ Сохранено
                   </Badge>
                 )}
@@ -270,16 +270,16 @@ export default function SettingsPage() {
                 Пороги дедупликации
               </CardTitle>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               Настройки для заведения: <strong>{venue?.name}</strong>
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
               <div className="space-y-2">
-                <Label className="text-sm">
+                <Label className="text-sm text-slate-800">
                   Допуск по дате
-                  <span className="ml-1 text-xs text-slate-400">(дней)</span>
+                  <span className="ml-1 text-xs text-slate-600">(дней)</span>
                 </Label>
                 <Input
                   type="number"
@@ -289,15 +289,16 @@ export default function SettingsPage() {
                   onChange={(e) =>
                     setSettings((s) => ({ ...s, dateToleranceDays: parseInt(e.target.value) || 0 }))
                   }
+                  aria-label="Допуск по дате в днях"
                 />
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-slate-600">
                   Записи с разницей до ±N дней считаются совпадением
                 </p>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm">
+                <Label className="text-sm text-slate-800">
                   Допуск по сумме
-                  <span className="ml-1 text-xs text-slate-400">(%)</span>
+                  <span className="ml-1 text-xs text-slate-600">(%)</span>
                 </Label>
                 <Input
                   type="number"
@@ -306,17 +307,18 @@ export default function SettingsPage() {
                   value={settings.amountTolerancePercent}
                   onChange={(e) =>
                     setSettings((s) => ({
-                      ...s,
+                       ...s,
                       amountTolerancePercent: parseInt(e.target.value) || 0,
                     }))
                   }
+                  aria-label="Допуск по сумме в процентах"
                 />
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-slate-600">
                   Суммы с разницей до ±N% считаются совпадением
                 </p>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm">
+                <Label className="text-sm text-slate-800">
                   Порог нечёткого совпадения
                 </Label>
                 <Input
@@ -331,8 +333,9 @@ export default function SettingsPage() {
                       fuzzyMatchThreshold: parseFloat(e.target.value) || 0,
                     }))
                   }
+                  aria-label="Порог нечёткого совпадения"
                 />
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-slate-600">
                   От 0 (строгое) до 1 (мягкое) сравнение названий
                 </p>
               </div>
@@ -344,7 +347,7 @@ export default function SettingsPage() {
                 Сохранить
               </Button>
               {saved && (
-                <Badge className="bg-emerald-600">
+                <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">
                   <span className="animate-pulse">✓</span> Сохранено
                 </Badge>
               )}
@@ -447,7 +450,7 @@ export default function SettingsPage() {
                 Сбросить все данные
               </Button>
             </div>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-xs text-slate-600">
               Экспорт сохраняет все данные (транзакции, заведения, инвентаризацию, настройки) в JSON-файл.
             </p>
           </CardContent>
@@ -465,7 +468,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             {venueLog.length === 0 ? (
-              <p className="text-sm text-slate-500 py-4 text-center">
+              <p className="text-sm text-slate-600 py-4 text-center">
                 Нет записей в логе. Запустите дедупликацию для начала работы.
               </p>
             ) : (
@@ -477,7 +480,7 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-center gap-2">
                       {entry.action === 'merge' && (
-                        <Badge className="bg-emerald-600">Объединение</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">Объединение</Badge>
                       )}
                       {entry.action === 'skip' && (
                         <Badge variant="secondary">Пропуск</Badge>
@@ -485,11 +488,11 @@ export default function SettingsPage() {
                       {entry.action === 'unmerge' && (
                         <Badge variant="secondary">Отмена</Badge>
                       )}
-                      <span className="text-xs text-slate-500 font-mono">
+                      <span className="text-xs text-slate-600 font-mono tabular-nums">
                         [{entry.transactionIds[0].slice(0, 6)}... — {entry.transactionIds[1].slice(0, 6)}...]
                       </span>
                     </div>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-600 font-mono tabular-nums">
                       {new Date(entry.performedAt).toLocaleString('ru-RU')}
                     </span>
                   </div>

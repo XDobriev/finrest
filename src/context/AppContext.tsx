@@ -97,6 +97,10 @@ interface AppState {
   exportAllData: () => string
   importAllData: (json: string) => boolean
   resetAllData: () => void
+
+  mobileMenuOpen: boolean
+  setMobileMenuOpen: (open: boolean) => void
+  toggleMobileMenu: () => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -140,6 +144,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     'finrest_inventory',
     []
   )
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const toggleMobileMenu = useCallback(() => setMobileMenuOpen((prev) => !prev), [])
 
   // 1. Initial Load from PostgreSQL
   useEffect(() => {
@@ -540,6 +546,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       exportAllData,
       importAllData,
       resetAllData,
+      mobileMenuOpen,
+      setMobileMenuOpen,
+      toggleMobileMenu,
     }),
     [
       venues,
@@ -570,6 +579,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       exportAllData,
       importAllData,
       resetAllData,
+      mobileMenuOpen,
+      toggleMobileMenu,
     ]
   )
 

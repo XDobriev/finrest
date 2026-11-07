@@ -14,7 +14,7 @@ import type { SessionPayload } from '@/lib/auth/jwt'
 
 interface HeaderProps {
   title: string
-  onMenuToggle: () => void
+  onMenuToggle?: () => void
 }
 
 const PRESETS = [
@@ -59,8 +59,17 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 
 export function Header({ title, onMenuToggle }: HeaderProps) {
   const router = useRouter()
-  const { venues, selectedVenueId, selectVenue, deduplicationPairs, dateRange, setDateRange } = useApp()
+  const {
+    venues,
+    selectedVenueId,
+    selectVenue,
+    deduplicationPairs,
+    dateRange,
+    setDateRange,
+    toggleMobileMenu,
+  } = useApp()
   const pendingPairs = deduplicationPairs.filter((p) => p.status === 'pending').length
+  const currentVenue = venues.find((v) => v.id === selectedVenueId)
 
   const [user, setUser] = useState<SessionPayload | null>(null)
 
@@ -88,22 +97,76 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
   const roleMeta = user ? ROLE_LABELS[user.role] || { label: user.role, color: 'bg-slate-100 text-slate-800' } : null
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white px-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuToggle}>
-          <Menu className="h-5 w-5" />
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white px-4 sm:px-6">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
+          onClick={() => {
+            if (onMenuToggle) {
+              onMenuToggle()
+            }
+            toggleMobileMenu()
+          }}
+          aria-label="Открыть главное меню"
+        >
+          <Menu className="h-5 w-5 text-slate-700" />
         </Button>
-        <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
+        <h1 className="text-lg sm:text-xl font-semibold text-slate-900">{title}</h1>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Mobile Venue Selector */}
+        <div className="sm:hidden">
+          <Popover>
+            <PopoverTrigger className="inline-flex">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs gap-1 max-w-[120px] truncate"
+                aria-label="Выбрать ресторан"
+              >
+                <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                <span className="truncate">{currentVenue?.name || 'Ресторан'}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-1.5" align="end">
+              <div className="space-y-1">
+                {venues.map((venue) => (
+                  <button
+                    key={venue.id}
+                    onClick={() => selectVenue(venue.id)}
+                    className={`w-full text-left px-2.5 py-1.5 text-xs rounded-md transition-colors flex items-center justify-between ${
+                      selectedVenueId === venue.id
+                        ? 'bg-emerald-50 text-emerald-900 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>{venue.name}</span>
+                    {selectedVenueId === venue.id && <span className="text-emerald-600">✓</span>}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+
         {/* Date range picker */}
         <Popover>
           <PopoverTrigger className="inline-flex">
-            <Button variant="outline" size="sm" className="gap-2 text-sm font-medium">
-              <Calendar className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs sm:text-sm font-medium h-8 sm:h-9"
+              aria-label="Выбрать период дат"
+            >
+              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-500" />
               <span className="hidden sm:inline">
                 {formatDate(dateRange.from)} — {formatDate(dateRange.to)}
+              </span>
+              <span className="sm:hidden">
+                {formatDate(dateRange.from)}
               </span>
             </Button>
           </PopoverTrigger>
@@ -122,8 +185,9 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500">От</label>
+                  <label htmlFor="date-range-from" className="text-xs text-slate-600 font-medium">От</label>
                   <Input
+                    id="date-range-from"
                     type="date"
                     value={dateRange.from}
                     onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
@@ -131,8 +195,9 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500">До</label>
+                  <label htmlFor="date-range-to" className="text-xs text-slate-600 font-medium">До</label>
                   <Input
+                    id="date-range-to"
                     type="date"
                     value={dateRange.to}
                     onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
@@ -144,7 +209,7 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
           </PopoverContent>
         </Popover>
 
-        {/* Venue selector */}
+        {/* Desktop Venue selector */}
         <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-border bg-slate-50 p-1">
           {venues.map((venue) => (
             <button
@@ -153,10 +218,10 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 selectedVenueId === venue.id
                   ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Building2 className="h-3.5 w-3.5" />
+              <Building2 className="h-3.5 w-3.5 text-slate-500" />
               <span className="hidden md:inline">{venue.name}</span>
               <span className="md:hidden">{venue.name.split(' ')[0]}</span>
             </button>
@@ -164,8 +229,8 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
         </div>
 
         {pendingPairs > 0 && (
-          <Badge variant="destructive" className="hidden sm:flex gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+          <Badge className="hidden sm:flex gap-1.5 bg-amber-100 text-amber-950 border border-amber-300 font-medium">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-pulse" />
             {pendingPairs} дубликатов
           </Badge>
         )}
@@ -177,13 +242,13 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
               <span className="text-xs font-semibold text-slate-900 leading-tight">
                 {user.name || user.email.split('@')[0]}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono leading-tight">
+              <span className="text-xs text-slate-600 font-mono leading-tight">
                 {user.email}
               </span>
             </div>
             {roleMeta && (
               <span
-                className={`hidden md:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border ${roleMeta.color}`}
+                className={`hidden md:inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${roleMeta.color}`}
               >
                 {roleMeta.label}
               </span>
@@ -193,7 +258,8 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
               size="icon"
               onClick={handleLogout}
               title="Выйти из аккаунта"
-              className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+              aria-label="Выйти из аккаунта"
+              className="h-8 w-8 text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors"
             >
               <LogOut className="h-4 w-4" />
             </Button>

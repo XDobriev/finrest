@@ -132,7 +132,7 @@ export default function UploadPage() {
           </CardHeader>
           <CardContent className="pt-0">
             {venueUploads.length === 0 ? (
-              <p className="text-sm text-slate-500 py-4 text-center">
+              <p className="text-sm text-slate-600 py-4 text-center">
                 Нет загруженных файлов
               </p>
             ) : (
@@ -143,10 +143,10 @@ export default function UploadPage() {
                     className="flex items-center justify-between rounded-lg border border-border p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <Upload className="h-4 w-4 text-slate-400" />
+                      <Upload className="h-4 w-4 text-slate-500" />
                       <div>
-                        <p className="text-sm font-medium text-slate-700">{upload.fileName}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-sm font-medium text-slate-800">{upload.fileName}</p>
+                        <p className="text-xs text-slate-600 font-mono tabular-nums">
                           {upload.rowCount} записей • {(upload.fileSize / 1024).toFixed(0)} КБ
                         </p>
                       </div>
@@ -155,7 +155,7 @@ export default function UploadPage() {
                       <Badge variant="secondary">
                         {upload.source === 'iiko' ? 'iiko' : upload.source === 'bank' ? 'Банк' : upload.source === 'admin' ? 'Админ' : 'Ручной'}
                       </Badge>
-                      <Badge className="bg-emerald-600">Загружен</Badge>
+                      <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">Загружен</Badge>
                     </div>
                   </div>
                 ))}

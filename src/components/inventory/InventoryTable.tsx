@@ -65,25 +65,36 @@ export function InventoryTable({ items, onAdd, onUpdate, onDelete, venueId, peri
             </TableRow>
           </TableHeader>
           <TableBody>
+            {items.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-slate-600 bg-slate-50/30">
+                  <p className="text-sm font-semibold text-slate-800">Нет позиций за этот период</p>
+                  <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto">
+                    Добавьте позицию вручную в строке ниже или настройте импорт номенклатуры из iiko в Настройках.
+                  </p>
+                </TableCell>
+              </TableRow>
+            )}
             {items.map((item) => {
               const shortage = item.expectedQty - item.actualQty
               const shortageCost = shortage * item.pricePerUnit
 
               return (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium text-sm">{item.name}</TableCell>
+                  <TableCell className="font-medium text-sm text-slate-900">{item.name}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="text-[10px]">
+                    <Badge variant="secondary" className="text-xs">
                       {CATEGORY_LABELS[item.category]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-slate-500">{item.unit}</TableCell>
+                  <TableCell className="text-sm text-slate-600">{item.unit}</TableCell>
                   <TableCell>
                     <Input
                       type="number"
                       value={item.expectedQty}
                       onChange={(e) => onUpdate(item.id, { expectedQty: parseFloat(e.target.value) || 0 })}
-                      className="h-8 w-20 text-sm"
+                      className="h-8 w-20 text-sm font-mono tabular-nums"
+                      aria-label={`Ожидаемое количество для ${item.name}`}
                     />
                   </TableCell>
                   <TableCell>
@@ -91,11 +102,12 @@ export function InventoryTable({ items, onAdd, onUpdate, onDelete, venueId, peri
                       type="number"
                       value={item.actualQty}
                       onChange={(e) => onUpdate(item.id, { actualQty: parseFloat(e.target.value) || 0 })}
-                      className="h-8 w-20 text-sm"
+                      className="h-8 w-20 text-sm font-mono tabular-nums"
+                      aria-label={`Фактическое количество для ${item.name}`}
                     />
                   </TableCell>
                   <TableCell>
-                    <span className={`text-sm font-mono font-medium ${shortage > 0 ? 'text-red-500' : shortage < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                    <span className={`text-sm font-mono tabular-nums font-medium ${shortage > 0 ? 'text-red-600' : shortage < 0 ? 'text-emerald-700' : 'text-slate-600'}`}>
                       {shortage > 0 ? `-${shortage}` : shortage < 0 ? `+${Math.abs(shortage)}` : '0'}
                     </span>
                   </TableCell>
@@ -104,17 +116,24 @@ export function InventoryTable({ items, onAdd, onUpdate, onDelete, venueId, peri
                       type="number"
                       value={item.pricePerUnit}
                       onChange={(e) => onUpdate(item.id, { pricePerUnit: parseFloat(e.target.value) || 0 })}
-                      className="h-8 w-24 text-sm"
+                      className="h-8 w-24 text-sm font-mono tabular-nums"
+                      aria-label={`Цена за единицу для ${item.name}`}
                     />
                   </TableCell>
                   <TableCell>
-                    <span className={`text-sm font-mono font-semibold ${shortageCost > 0 ? 'text-red-500' : shortageCost < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                    <span className={`text-sm font-mono tabular-nums font-semibold ${shortageCost > 0 ? 'text-red-600' : shortageCost < 0 ? 'text-emerald-700' : 'text-slate-600'}`}>
                       {formatCurrency(Math.abs(shortageCost))}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(item.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-slate-400" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-slate-500 hover:text-red-600"
+                      onClick={() => onDelete(item.id)}
+                      aria-label={`Удалить позицию ${item.name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -128,11 +147,12 @@ export function InventoryTable({ items, onAdd, onUpdate, onDelete, venueId, peri
                   value={newItem.name}
                   onChange={(e) => setNewItem(s => ({ ...s, name: e.target.value }))}
                   className="h-8 text-sm"
+                  aria-label="Название новой позиции"
                 />
               </TableCell>
               <TableCell>
                 <Select value={newItem.category} onValueChange={(v) => setNewItem(s => ({ ...s, category: v as ExpenseCategory }))}>
-                  <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs w-28" aria-label="Категория новой позиции"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
                       <SelectItem key={key} value={key}>{label}</SelectItem>
@@ -142,25 +162,25 @@ export function InventoryTable({ items, onAdd, onUpdate, onDelete, venueId, peri
               </TableCell>
               <TableCell>
                 <Select value={newItem.unit} onValueChange={(v) => setNewItem(s => ({ ...s, unit: v || 'кг' }))}>
-                  <SelectTrigger className="h-8 text-xs w-16"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs w-16" aria-label="Единица измерения новой позиции"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </TableCell>
               <TableCell>
-                <Input type="number" value={newItem.expectedQty || ''} onChange={(e) => setNewItem(s => ({ ...s, expectedQty: parseFloat(e.target.value) || 0 }))} className="h-8 w-20 text-sm" />
+                <Input type="number" value={newItem.expectedQty || ''} onChange={(e) => setNewItem(s => ({ ...s, expectedQty: parseFloat(e.target.value) || 0 }))} className="h-8 w-20 text-sm font-mono tabular-nums" placeholder="0" aria-label="Ожидаемое количество" />
               </TableCell>
               <TableCell>
-                <Input type="number" value={newItem.actualQty || ''} onChange={(e) => setNewItem(s => ({ ...s, actualQty: parseFloat(e.target.value) || 0 }))} className="h-8 w-20 text-sm" />
-              </TableCell>
-              <TableCell></TableCell>
-              <TableCell>
-                <Input type="number" value={newItem.pricePerUnit || ''} onChange={(e) => setNewItem(s => ({ ...s, pricePerUnit: parseFloat(e.target.value) || 0 }))} className="h-8 w-24 text-sm" />
+                <Input type="number" value={newItem.actualQty || ''} onChange={(e) => setNewItem(s => ({ ...s, actualQty: parseFloat(e.target.value) || 0 }))} className="h-8 w-20 text-sm font-mono tabular-nums" placeholder="0" aria-label="Фактическое количество" />
               </TableCell>
               <TableCell></TableCell>
               <TableCell>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleAdd} disabled={!newItem.name.trim()}>
+                <Input type="number" value={newItem.pricePerUnit || ''} onChange={(e) => setNewItem(s => ({ ...s, pricePerUnit: parseFloat(e.target.value) || 0 }))} className="h-8 w-24 text-sm font-mono tabular-nums" placeholder="0" aria-label="Цена за единицу" />
+              </TableCell>
+              <TableCell></TableCell>
+              <TableCell>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleAdd} disabled={!newItem.name.trim()} aria-label="Добавить позицию инвентаризации">
                   <Plus className="h-4 w-4 text-emerald-600" />
                 </Button>
               </TableCell>
@@ -169,12 +189,12 @@ export function InventoryTable({ items, onAdd, onUpdate, onDelete, venueId, peri
         </Table>
       </div>
 
-      <div className={`rounded-lg p-4 ${totalShortage > 0 ? 'bg-red-50' : totalShortage < 0 ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+      <div className={`rounded-lg p-4 ${totalShortage > 0 ? 'bg-red-50 border border-red-200' : totalShortage < 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200'}`}>
         <div className="flex justify-between items-center">
-          <span className="text-sm font-semibold text-slate-700">
+          <span className="text-sm font-semibold text-slate-800">
             {totalShortage > 0 ? 'Итого недостача' : totalShortage < 0 ? 'Итого излишек' : 'Расхождений нет'}
           </span>
-          <span className={`text-lg font-mono font-bold ${totalShortage > 0 ? 'text-red-600' : totalShortage < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+          <span className={`text-lg font-mono tabular-nums font-bold ${totalShortage > 0 ? 'text-red-700' : totalShortage < 0 ? 'text-emerald-700' : 'text-slate-600'}`}>
             {formatCurrency(Math.abs(totalShortage))}
           </span>
         </div>

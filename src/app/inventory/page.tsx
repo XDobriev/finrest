@@ -4,6 +4,7 @@ import React, { useMemo } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { InventoryTable } from '@/components/inventory/InventoryTable'
 import { useApp } from '@/context/AppContext'
 import { ClipboardList, FileSpreadsheet } from 'lucide-react'
@@ -11,7 +12,16 @@ import * as XLSX from 'xlsx'
 import { CATEGORY_LABELS } from '@/types'
 
 export default function InventoryPage() {
-  const { selectedVenueId, venues, dateRange, inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useApp()
+  const {
+    selectedVenueId,
+    venues,
+    dateRange,
+    inventory,
+    addInventoryItem,
+    updateInventoryItem,
+    deleteInventoryItem,
+    isLoading,
+  } = useApp()
 
   const venue = venues.find(v => v.id === selectedVenueId)
   const period = dateRange.from.substring(0, 7)
@@ -75,17 +85,26 @@ export default function InventoryPage() {
                 Скачать акт
               </Button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">{venue?.name}</p>
+            <p className="text-xs text-slate-600 mt-1">{venue?.name}</p>
           </CardHeader>
           <CardContent>
-            <InventoryTable
-              items={venueItems}
-              onAdd={addInventoryItem}
-              onUpdate={updateInventoryItem}
-              onDelete={deleteInventoryItem}
-              venueId={selectedVenueId}
-              period={period}
-            />
+            {isLoading ? (
+              <div className="space-y-3 py-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+              </div>
+            ) : (
+              <InventoryTable
+                items={venueItems}
+                onAdd={addInventoryItem}
+                onUpdate={updateInventoryItem}
+                onDelete={deleteInventoryItem}
+                venueId={selectedVenueId}
+                period={period}
+              />
+            )}
           </CardContent>
         </Card>
       </main>

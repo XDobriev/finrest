@@ -23,13 +23,13 @@ function TransactionCard({ tx, label }: { tx: Transaction; label: string }) {
       <div className="flex items-center justify-between mb-3">
         <span className={cn(
           'text-xs font-semibold px-2 py-0.5 rounded-full',
-          label === 'Запись 1' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+          label === 'Запись 1' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-900'
         )}>
           {label}
         </span>
         <Badge
           variant="secondary"
-          className="text-[10px]"
+          className="text-xs"
           style={{ backgroundColor: `${getSourceColor(tx.source)}20`, color: getSourceColor(tx.source) }}
         >
           {SOURCE_LABELS[tx.source]}
@@ -39,11 +39,11 @@ function TransactionCard({ tx, label }: { tx: Transaction; label: string }) {
         <div className="flex justify-between items-start">
           <div>
             <p className="text-sm font-semibold text-slate-900">{tx.counterparty}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{tx.description}</p>
+            <p className="text-xs text-slate-600 mt-0.5">{tx.description}</p>
           </div>
-          <p className="text-sm font-bold font-mono text-slate-900">{formatCurrency(tx.amount)}</p>
+          <p className="text-sm font-bold font-mono tabular-nums text-slate-900">{formatCurrency(tx.amount)}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-xs text-slate-600">
           <span>{new Date(tx.date).toLocaleDateString('ru-RU')}</span>
           <span>•</span>
           <span>{CATEGORY_LABELS[tx.category]}</span>
@@ -55,10 +55,12 @@ function TransactionCard({ tx, label }: { tx: Transaction; label: string }) {
 
 export function DeduplicationPairCard({ pair, onResolve }: DeduplicationPairCardProps) {
   const scoreColor = pair.matchScore >= 85
-    ? 'text-red-600 bg-red-50'
+    ? 'text-red-700 bg-red-100 border border-red-200'
     : pair.matchScore >= 70
-      ? 'text-amber-600 bg-amber-50'
-      : 'text-blue-600 bg-blue-50'
+      ? 'text-amber-900 bg-amber-100 border border-amber-200'
+      : 'text-blue-800 bg-blue-100 border border-blue-200'
+
+  const savingsAmount = Math.min(pair.leftTransaction.amount, pair.rightTransaction.amount) || pair.rightTransaction.amount
 
   return (
     <Card className="rounded-lg shadow-sm">
@@ -69,18 +71,18 @@ export function DeduplicationPairCard({ pair, onResolve }: DeduplicationPairCard
             <span className={cn('text-sm font-bold px-2.5 py-1 rounded-full', scoreColor)}>
               {pair.matchScore}%
             </span>
-            <span className="text-sm font-medium text-slate-600">совпадение</span>
+            <span className="text-sm font-medium text-slate-700">совпадение</span>
           </div>
           <div className="flex items-center gap-2">
-            <Link className="h-4 w-4 text-emerald-500" />
-            <span className="text-xs text-slate-400">ID: {pair.id.slice(0, 8)}</span>
+            <Link className="h-4 w-4 text-emerald-600" />
+            <span className="text-xs text-slate-600">ID: {pair.id.slice(0, 8)}</span>
           </div>
         </div>
 
         {/* Match reasons */}
         <div className="flex flex-wrap gap-1.5">
           {pair.matchReasons.map((reason, i) => (
-            <Badge key={i} variant="secondary" className="text-[11px] font-normal">
+            <Badge key={i} variant="secondary" className="text-xs font-normal">
               {reason}
             </Badge>
           ))}
@@ -91,9 +93,9 @@ export function DeduplicationPairCard({ pair, onResolve }: DeduplicationPairCard
           <TransactionCard tx={pair.leftTransaction} label="Запись 1" />
           <div className="flex items-center justify-center">
             <div className="h-px w-6 sm:hidden" />
-            <div className="hidden sm:flex flex-col items-center gap-1 text-slate-400">
+            <div className="hidden sm:flex flex-col items-center gap-1 text-slate-500">
               <Unlink2 className="h-4 w-4" />
-              <span className="text-[10px]">vs</span>
+              <span className="text-xs font-medium">vs</span>
             </div>
           </div>
           <TransactionCard tx={pair.rightTransaction} label="Запись 2" />
@@ -101,36 +103,45 @@ export function DeduplicationPairCard({ pair, onResolve }: DeduplicationPairCard
 
         {/* Actions */}
         {pair.status === 'pending' && (
-          <div className="flex items-center gap-2 pt-2 border-t border-border">
-            <Button
-              size="sm"
-              variant="destructive"
-              className="gap-1.5 bg-red-600 hover:bg-red-700"
-              onClick={() => onResolve(pair.id, 'merge')}
-            >
-              <Link className="h-3.5 w-3.5" />
-              Объединить
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => onResolve(pair.id, 'skip')}
-            >
-              <SkipForward className="h-3.5 w-3.5" />
-              Оставить обе
-            </Button>
+          <div className="flex items-center justify-between flex-wrap gap-3 pt-2 border-t border-border">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+                onClick={() => onResolve(pair.id, 'merge')}
+              >
+                <Link className="h-3.5 w-3.5" />
+                Объединить
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-slate-700"
+                onClick={() => onResolve(pair.id, 'skip')}
+              >
+                <SkipForward className="h-3.5 w-3.5" />
+                Оставить обе
+              </Button>
+            </div>
+            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-mono tabular-nums text-xs font-semibold px-2.5 py-1">
+              Экономия: +{formatCurrency(savingsAmount)}
+            </Badge>
           </div>
         )}
 
         {pair.status === 'merged' && (
-          <div className="flex items-center gap-2 pt-2 border-t border-border">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm text-emerald-600 font-medium">Записи объединены</span>
+          <div className="flex items-center justify-between flex-wrap gap-3 pt-2 border-t border-border">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+              <span className="text-sm text-emerald-800 font-medium">Записи объединены</span>
+              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-mono tabular-nums text-xs font-semibold">
+                Сэкономлено: +{formatCurrency(savingsAmount)}
+              </Badge>
+            </div>
             <Button
               size="sm"
               variant="ghost"
-              className="ml-auto text-xs"
+              className="text-xs text-slate-600 hover:text-slate-900"
               onClick={() => onResolve(pair.id, 'unmerge')}
             >
               Отменить
@@ -140,8 +151,8 @@ export function DeduplicationPairCard({ pair, onResolve }: DeduplicationPairCard
 
         {pair.status === 'skipped' && (
           <div className="flex items-center gap-2 pt-2 border-t border-border">
-            <XCircle className="h-4 w-4 text-slate-400" />
-            <span className="text-sm text-slate-500">Оставлены раздельно</span>
+            <XCircle className="h-4 w-4 text-slate-500" />
+            <span className="text-sm text-slate-600">Оставлены раздельно</span>
           </div>
         )}
       </CardContent>

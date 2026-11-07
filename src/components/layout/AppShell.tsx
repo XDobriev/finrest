@@ -4,12 +4,12 @@ import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Sidebar } from './Sidebar'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { AppProvider } from '@/context/AppContext'
+import { AppProvider, useApp } from '@/context/AppContext'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 function ShellInner({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const { mobileMenuOpen, setMobileMenuOpen } = useApp()
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -19,9 +19,9 @@ function ShellInner({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile sidebar */}
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="w-64 p-0">
-          <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
+          <Sidebar collapsed={false} onToggle={() => setMobileMenuOpen(false)} />
         </SheetContent>
       </Sheet>
 

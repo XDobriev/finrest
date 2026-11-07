@@ -129,7 +129,7 @@ export function FileUploader({ source, venueName, onParsed }: FileUploaderProps)
             <h3 className="font-semibold text-slate-900">{SOURCE_LABELS[source]}</h3>
           </div>
           {file && (
-            <Button variant="ghost" size="sm" onClick={clearFile}>
+            <Button variant="ghost" size="sm" onClick={clearFile} aria-label="Очистить выбранный файл">
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -147,11 +147,11 @@ export function FileUploader({ source, venueName, onParsed }: FileUploaderProps)
                 : 'border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50'
             )}
           >
-            <Upload className="h-8 w-8 text-slate-400 mb-3" />
+            <Upload className="h-8 w-8 text-slate-500 mb-3" />
             <p className="text-sm font-medium text-slate-700 mb-1">
               Перетащите файл сюда
             </p>
-            <p className="text-xs text-slate-500 mb-3">
+            <p className="text-xs text-slate-600 mb-3">
               {source === 'bank'
                 ? 'Выписка 1C (.txt), Excel (.xlsx, .xls) или CSV'
                 : 'Excel (.xlsx, .xls) или CSV'}
@@ -175,7 +175,7 @@ export function FileUploader({ source, venueName, onParsed }: FileUploaderProps)
                 <FileSpreadsheet className="h-4 w-4 text-slate-500" />
                 <div>
                   <p className="text-sm font-medium text-slate-700">{file.name}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-600">
                     {(file.size / 1024).toFixed(1)} КБ
                   </p>
                 </div>
@@ -186,7 +186,7 @@ export function FileUploader({ source, venueName, onParsed }: FileUploaderProps)
                   Парсинг...
                 </Badge>
               ) : parseResult?.success ? (
-                <Badge className="gap-1 bg-emerald-600">
+                <Badge className="gap-1 bg-emerald-100 text-emerald-800 border border-emerald-300">
                   <CheckCircle2 className="h-3 w-3" />
                   {parseResult.rows.length} записей
                 </Badge>

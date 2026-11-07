@@ -56,16 +56,16 @@ export function DataPreview({ rows, maxRows = 10 }: DataPreviewProps) {
             <TableBody>
               {previewRows.map((row, i) => (
                 <TableRow key={i}>
-                  <TableCell className="text-xs text-slate-400 font-mono">{i + 1}</TableCell>
+                  <TableCell className="text-xs text-slate-600 font-mono tabular-nums">{i + 1}</TableCell>
                   <TableCell>
                     {row.type === 'income' ? (
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 text-[11px]">
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 gap-1 text-xs">
                         <ArrowDownRight className="h-3 w-3" />
                         Доход
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-slate-700 gap-1 text-[11px]">
-                        <ArrowUpRight className="h-3 w-3 text-red-500" />
+                      <Badge variant="outline" className="text-slate-700 gap-1 text-xs">
+                        <ArrowUpRight className="h-3 w-3 text-red-600" />
                         Расход
                       </Badge>
                     )}
@@ -74,7 +74,7 @@ export function DataPreview({ rows, maxRows = 10 }: DataPreviewProps) {
                     {new Date(row.date).toLocaleDateString('ru-RU')}
                   </TableCell>
                   <TableCell
-                    className={`text-sm font-mono font-semibold ${
+                    className={`text-sm font-mono tabular-nums font-semibold ${
                       row.type === 'income' ? 'text-emerald-700' : 'text-slate-900'
                     }`}
                   >

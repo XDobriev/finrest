@@ -6,7 +6,7 @@ import type { DailyMetric, CategoryBreakdown, DashboardMetrics } from '@/types'
 import type { ExpenseCategory } from '@/types'
 
 export function useDashboard() {
-  const { transactions, selectedVenueId, dateRange } = useApp()
+  const { transactions, selectedVenueId, dateRange, isLoading } = useApp()
 
   const venueTransactions = useMemo(
     () => transactions.filter((t) => {
@@ -18,16 +18,26 @@ export function useDashboard() {
   )
 
   const metrics = useMemo<DashboardMetrics>(() => {
-    const income = venueTransactions.filter((t) => t.type === 'income')
+    const uniqueIncome = venueTransactions.filter((t) => t.type === 'income' && t.status !== 'duplicate')
     const allExpenses = venueTransactions.filter((t) => t.type === 'expense')
     const uniqueExpenses = allExpenses.filter((t) => t.status !== 'duplicate')
 
-    const totalRevenue = income.reduce((sum, t) => sum + t.amount, 0)
+    const totalRevenue = uniqueIncome.reduce((sum, t) => sum + t.amount, 0)
     const totalExpenses = allExpenses.reduce((sum, t) => sum + t.amount, 0)
     const totalExpensesAfterDedup = uniqueExpenses.reduce((sum, t) => sum + t.amount, 0)
     const netProfit = totalRevenue - totalExpensesAfterDedup
     const savings = totalExpenses - totalExpensesAfterDedup
     const savingsPercent = totalExpenses > 0 ? (savings / totalExpenses) * 100 : 0
+
+    const foodCostAmount = uniqueExpenses
+      .filter((t) => t.category === 'food' || t.category === 'bar')
+      .reduce((sum, t) => sum + t.amount, 0)
+    const foodCostPercent = totalRevenue > 0 ? (foodCostAmount / totalRevenue) * 100 : 0
+
+    const payrollAmount = uniqueExpenses
+      .filter((t) => t.category === 'salary')
+      .reduce((sum, t) => sum + t.amount, 0)
+    const payrollPercent = totalRevenue > 0 ? (payrollAmount / totalRevenue) * 100 : 0
 
     return {
       totalRevenue,
@@ -38,6 +48,10 @@ export function useDashboard() {
       revenueTrend: 8.5,
       expenseTrend: -3.2,
       profitTrend: 12.1,
+      foodCostAmount,
+      foodCostPercent,
+      payrollAmount,
+      payrollPercent,
     }
   }, [venueTransactions])
 
@@ -97,5 +111,6 @@ export function useDashboard() {
     dailyMetrics,
     categoryBreakdown,
     transactions: venueTransactions,
+    isLoading,
   }
 }
