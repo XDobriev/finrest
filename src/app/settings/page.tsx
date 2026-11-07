@@ -7,8 +7,27 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useApp } from '@/context/AppContext'
-import { Sliders, History, User, Shield, Save, Download, Upload, AlertTriangle } from 'lucide-react'
+import {
+  Sliders,
+  History,
+  User,
+  Shield,
+  Save,
+  Download,
+  Upload,
+  AlertTriangle,
+  Cloud,
+  RefreshCw,
+  Loader2,
+} from 'lucide-react'
+import {
+  testIikoConnectionAction,
+  saveIikoSettingsAction,
+  syncVenueIikoAction,
+} from '@/app/actions/iiko'
+import type { IikoOrganization } from '@/lib/iiko/types'
 
 export default function SettingsPage() {
   const {
@@ -30,9 +49,75 @@ export default function SettingsPage() {
   })
   const [saved, setSaved] = useState(false)
 
+  // iiko states
+  const [iikoApiKey, setIikoApiKey] = useState('demo_restaurant_api_key')
+  const [iikoOrgId, setIikoOrgId] = useState('demo-org-1')
+  const [iikoOrgs, setIikoOrgs] = useState<IikoOrganization[]>([
+    { id: 'demo-org-1', name: 'GastroBar на Арбате' },
+    { id: 'demo-org-2', name: 'Кофейня "Зёрна"' },
+  ])
+  const [isTesting, setIsTesting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [iikoMessage, setIikoMessage] = useState<string | null>(null)
+  const [iikoSaved, setIikoSaved] = useState(false)
+
   if (venue && venue.id !== prevVenueId) {
     setPrevVenueId(venue.id)
     setSettings(venue.deduplicationSettings)
+  }
+
+  const handleTestIiko = async () => {
+    setIsTesting(true)
+    setIikoMessage(null)
+    try {
+      const res = await testIikoConnectionAction(iikoApiKey)
+      if (res.success) {
+        setIikoOrgs(res.organizations)
+        if (res.organizations.length > 0) {
+          setIikoOrgId(res.organizations[0].id)
+        }
+        setIikoMessage(`✓ Подключение успешно. Найдено организаций: ${res.organizations.length}`)
+      } else {
+        setIikoMessage(`Ошибка: ${res.error}`)
+      }
+    } catch {
+      setIikoMessage('Не удалось подключиться к iikoCloud')
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  const handleSaveIiko = async () => {
+    if (!selectedVenueId) return
+    const res = await saveIikoSettingsAction(selectedVenueId, {
+      apiKey: iikoApiKey,
+      orgId: iikoOrgId,
+      autoSync: true,
+    })
+    if (res.success) {
+      setIikoSaved(true)
+      setTimeout(() => setIikoSaved(false), 2000)
+    }
+  }
+
+  const handleSyncNow = async () => {
+    if (!selectedVenueId) return
+    setIsSyncing(true)
+    setIikoMessage(null)
+    try {
+      const res = await syncVenueIikoAction(selectedVenueId)
+      if (res.success) {
+        setIikoMessage(
+          `✓ Синхронизация завершена: +${res.syncedSalesCount} смен, +${res.syncedInventoryCount} позиций номенклатуры, ${res.newDuplicatesCount} пар для дедупликации`
+        )
+      } else {
+        setIikoMessage(`Ошибка синхронизации: ${res.error}`)
+      }
+    } catch {
+      setIikoMessage('Сбой при синхронизации данных')
+    } finally {
+      setIsSyncing(false)
+    }
   }
 
   const handleSave = async () => {
@@ -67,9 +152,111 @@ export default function SettingsPage() {
                 <User className="h-7 w-7 text-emerald-600" />
               </div>
               <div>
-                <p className="font-semibold text-slate-900">Специалист по автоматизации</p>
-                <p className="text-sm text-slate-500">admin@finrest.app</p>
+                <p className="font-semibold text-slate-900">Управляющий партнёр</p>
+                <p className="text-sm text-slate-500 font-mono">admin@finrest.ru</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* iikoCloud Integration */}
+        <Card className="rounded-lg shadow-sm border-emerald-200/80 bg-gradient-to-b from-emerald-50/20 to-white">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cloud className="h-5 w-5 text-emerald-600" />
+                <CardTitle className="text-base font-semibold text-slate-900">
+                  Интеграция с iikoCloud
+                </CardTitle>
+              </div>
+              <Badge variant="outline" className="text-xs border-emerald-300 text-emerald-800 bg-emerald-50">
+                {venue?.name}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Автоматическая синхронизация кассовых смен, выручки и остатков блюд по iiko API
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-700">API Login (iikoCloud)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="apiLogin или demo_..."
+                    value={iikoApiKey}
+                    onChange={(e) => setIikoApiKey(e.target.value)}
+                    className="text-xs font-mono h-9"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTestIiko}
+                    disabled={isTesting}
+                    className="shrink-0 text-xs gap-1.5 h-9"
+                  >
+                    {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    Проверить
+                  </Button>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Для тестовой среды введите <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">demo_restaurant</code>
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-700">Организация в iiko</Label>
+                <Select value={iikoOrgId} onValueChange={(val) => setIikoOrgId(val || '')}>
+                  <SelectTrigger className="text-xs h-9">
+                    <SelectValue placeholder="Выберите ресторан" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {iikoOrgs.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-slate-400">
+                  ID: <span className="font-mono">{iikoOrgId}</span>
+                </p>
+              </div>
+            </div>
+
+            {iikoMessage && (
+              <div className="p-3 text-xs rounded-lg bg-emerald-50/80 border border-emerald-200 text-emerald-900 font-medium">
+                {iikoMessage}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleSaveIiko}
+                  size="sm"
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs gap-1.5"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  Сохранить ключ
+                </Button>
+                {iikoSaved && (
+                  <Badge className="bg-emerald-600 text-white text-xs">
+                    ✓ Сохранено
+                  </Badge>
+                )}
+              </div>
+
+              <Button
+                onClick={handleSyncNow}
+                disabled={isSyncing}
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1.5"
+              >
+                {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Синхронизировать сейчас
+              </Button>
             </div>
           </CardContent>
         </Card>

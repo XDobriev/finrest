@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: finrest-app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-finrest_admin}:${POSTGRES_PASSWORD:-finrest_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-finrest_prod}
+      - JWT_SECRET=${JWT_SECRET:-finrest-prod-jwt-secret-key-152fz-min-32-chars}
+      - PORT=3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - finrest-network
+    expose:
+      - "3000"
+
+  # PostgreSQL 17 Database (Local Russian Cloud, 152-FZ)
+  postgres:
+    image: postgres:17-alpine
+    container_name: finrest-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-finrest_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finrest_secure_pass_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-finrest_prod}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-finrest_admin} -d ${POSTGRES_DB:-finrest_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finrest-network
+
+  # Nginx Reverse Proxy with SSL & Security Headers
+  nginx:
+    image: nginx:alpine
+    container_name: finrest-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+    depends_on:
+      - app
+    networks:
+      - finrest-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  finrest-network:
+    driver: bridge

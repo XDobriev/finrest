@@ -24,6 +24,10 @@ model Venue {
   dateToleranceDays      Int                 @default(1)
   amountTolerancePercent Float               @default(5.0)
   fuzzyMatchThreshold    Float               @default(0.7)
+  iikoApiKey             String?
+  iikoOrgId              String?
+  iikoAutoSync           Boolean             @default(false)
+  iikoLastSyncAt         DateTime?
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
   ownerId                String?

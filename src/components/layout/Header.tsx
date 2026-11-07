@@ -1,12 +1,16 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useApp } from '@/context/AppContext'
-import { Building2, Menu, Calendar } from 'lucide-react'
+import { Building2, Menu, Calendar, LogOut, User as UserIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { getCurrentUserAction, logoutAction } from '@/app/actions/auth'
+import type { SessionPayload } from '@/lib/auth/jwt'
 
 interface HeaderProps {
   title: string
@@ -14,38 +18,74 @@ interface HeaderProps {
 }
 
 const PRESETS = [
-  { label: 'Этот месяц', getValue: () => {
-    const now = new Date()
-    return {
-      from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0],
-      to: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0],
-    }
-  }},
-  { label: 'Прошлый месяц', getValue: () => {
-    const now = new Date()
-    return {
-      from: new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0],
-      to: new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0],
-    }
-  }},
-  { label: 'Квартал', getValue: () => {
-    const now = new Date()
-    const quarter = Math.floor(now.getMonth() / 3)
-    return {
-      from: new Date(now.getFullYear(), quarter * 3, 1).toISOString().split('T')[0],
-      to: new Date(now.getFullYear(), quarter * 3 + 3, 0).toISOString().split('T')[0],
-    }
-  }},
+  {
+    label: 'Этот месяц',
+    getValue: () => {
+      const now = new Date()
+      return {
+        from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0],
+        to: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0],
+      }
+    },
+  },
+  {
+    label: 'Прошлый месяц',
+    getValue: () => {
+      const now = new Date()
+      return {
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0],
+        to: new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0],
+      }
+    },
+  },
+  {
+    label: 'Квартал',
+    getValue: () => {
+      const now = new Date()
+      const quarter = Math.floor(now.getMonth() / 3)
+      return {
+        from: new Date(now.getFullYear(), quarter * 3, 1).toISOString().split('T')[0],
+        to: new Date(now.getFullYear(), quarter * 3 + 3, 0).toISOString().split('T')[0],
+      }
+    },
+  },
 ]
 
+const ROLE_LABELS: Record<string, { label: string; color: string }> = {
+  OWNER: { label: 'Владелец', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  MANAGER: { label: 'Управляющий', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  ACCOUNTANT: { label: 'Бухгалтер', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+}
+
 export function Header({ title, onMenuToggle }: HeaderProps) {
+  const router = useRouter()
   const { venues, selectedVenueId, selectVenue, deduplicationPairs, dateRange, setDateRange } = useApp()
-  const pendingPairs = deduplicationPairs.filter(p => p.status === 'pending').length
+  const pendingPairs = deduplicationPairs.filter((p) => p.status === 'pending').length
+
+  const [user, setUser] = useState<SessionPayload | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+    getCurrentUserAction().then((u) => {
+      if (isMounted) setUser(u)
+    })
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    await logoutAction()
+    router.push('/login')
+    router.refresh()
+  }
 
   const formatDate = (iso: string) => {
     const d = new Date(iso + 'T00:00:00')
     return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
   }
+
+  const roleMeta = user ? ROLE_LABELS[user.role] || { label: user.role, color: 'bg-slate-100 text-slate-800' } : null
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white px-6">
@@ -62,7 +102,9 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
           <PopoverTrigger className="inline-flex">
             <Button variant="outline" size="sm" className="gap-2 text-sm font-medium">
               <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">{formatDate(dateRange.from)} — {formatDate(dateRange.to)}</span>
+              <span className="hidden sm:inline">
+                {formatDate(dateRange.from)} — {formatDate(dateRange.to)}
+              </span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-4" align="end">
@@ -126,6 +168,43 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
             <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
             {pendingPairs} дубликатов
           </Badge>
+        )}
+
+        {/* User profile & Logout */}
+        {user ? (
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+            <div className="hidden xl:flex flex-col text-right">
+              <span className="text-xs font-semibold text-slate-900 leading-tight">
+                {user.name || user.email.split('@')[0]}
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono leading-tight">
+                {user.email}
+              </span>
+            </div>
+            {roleMeta && (
+              <span
+                className={`hidden md:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border ${roleMeta.color}`}
+              >
+                {roleMeta.label}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              title="Выйти из аккаунта"
+              className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <Link href="/login">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <UserIcon className="h-3.5 w-3.5" />
+              Войти
+            </Button>
+          </Link>
         )}
       </div>
     </header>
