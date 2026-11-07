@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useApp } from '@/context/AppContext'
-import { generateId } from '@/lib/utils'
 import { format } from 'date-fns'
 import type { DataSource } from '@/types'
 import type { ParsedRow, ParseResult } from '@/lib/parsers'
@@ -17,11 +16,19 @@ import { Upload, CheckCircle2, History } from 'lucide-react'
 const sources: DataSource[] = ['iiko', 'bank', 'admin', 'manual']
 
 export default function UploadPage() {
-  const { selectedVenueId, addTransaction, addFileUpload, fileUploads } = useApp()
+  const {
+    selectedVenueId,
+    venues,
+    addTransaction,
+    addFileUpload,
+    fileUploads,
+    runDeduplication,
+  } = useApp()
   const [previews, setPreviews] = useState<Record<DataSource, ParsedRow[]>>({
     iiko: [], bank: [], admin: [], manual: [],
   })
   const [importing, setImporting] = useState(false)
+  const currentVenue = venues.find((v) => v.id === selectedVenueId)
 
   const handleParsed = (source: DataSource, result: ParseResult) => {
     if (result.success) {
@@ -31,8 +38,6 @@ export default function UploadPage() {
 
   const handleImport = async () => {
     setImporting(true)
-    // Simulate async import
-    await new Promise((r) => setTimeout(r, 500))
 
     for (const source of sources) {
       const rows = previews[source]
@@ -44,8 +49,8 @@ export default function UploadPage() {
           source,
           date: row.date,
           amount: row.amount,
-          type: 'expense',
-          category: 'other',
+          type: row.type,
+          category: row.category,
           counterparty: row.counterparty,
           description: row.description,
         })
@@ -61,6 +66,7 @@ export default function UploadPage() {
       })
     }
 
+    await runDeduplication()
     setImporting(false)
     setPreviews({ iiko: [], bank: [], admin: [], manual: [] })
   }
@@ -78,7 +84,7 @@ export default function UploadPage() {
             <FileUploader
               key={source}
               source={source}
-              venueId={selectedVenueId}
+              venueName={currentVenue?.name}
               onParsed={(result) => handleParsed(source, result)}
             />
           ))}

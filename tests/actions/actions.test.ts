@@ -11,6 +11,15 @@ import {
   deleteTransactionAction,
 } from '../../src/app/actions/transactions'
 import { runDeduplicationAction } from '../../src/app/actions/deduplication'
+import {
+  getInventoryItemsAction,
+  createInventoryItemAction,
+  deleteInventoryItemAction,
+} from '../../src/app/actions/inventory'
+import {
+  getCashBalancesAction,
+  setCashBalanceAction,
+} from '../../src/app/actions/cash'
 
 test('Server Actions: getVenuesAction returns formatted venues', async () => {
   const venues = await getVenuesAction()
@@ -74,4 +83,33 @@ test('Server Actions: transactions and real deduplication run', async () => {
   // Clean up
   await deleteTransactionAction(tx1.id)
   await deleteTransactionAction(tx2.id)
+})
+
+test('Server Actions: inventory item lifecycle', async () => {
+  const item = await createInventoryItemAction({
+    venueId: 'venue-1',
+    name: 'Кофе зерновой Эфиопия',
+    category: 'bar',
+    unit: 'кг',
+    expectedQty: 20,
+    actualQty: 18.5,
+    pricePerUnit: 1400,
+  })
+
+  assert.ok(item.id)
+  assert.equal(item.name, 'Кофе зерновой Эфиопия')
+
+  const list = await getInventoryItemsAction('venue-1')
+  assert.ok(list.some((i) => i.id === item.id))
+
+  await deleteInventoryItemAction(item.id)
+  const afterList = await getInventoryItemsAction('venue-1')
+  assert.ok(!afterList.some((i) => i.id === item.id))
+})
+
+test('Server Actions: cash balances upsert and fetch', async () => {
+  await setCashBalanceAction('venue-1', '2026-11', 450000)
+
+  const balances = await getCashBalancesAction('venue-1')
+  assert.equal(balances['2026-11'], 450000)
 })

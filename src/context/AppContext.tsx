@@ -38,6 +38,16 @@ import {
   resolveDeduplicationPairAction,
   runDeduplicationAction,
 } from '@/app/actions/deduplication'
+import {
+  getInventoryItemsAction,
+  createInventoryItemAction,
+  updateInventoryItemAction,
+  deleteInventoryItemAction,
+} from '@/app/actions/inventory'
+import {
+  getCashBalancesAction,
+  setCashBalanceAction,
+} from '@/app/actions/cash'
 
 interface AppState {
   venues: Venue[]
@@ -151,14 +161,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
           setSelectedVenueId(activeVenueId)
 
-          const [dbTxs, dbPairs] = await Promise.all([
+          const [dbTxs, dbPairs, dbInventory, dbCash] = await Promise.all([
             getTransactionsAction(activeVenueId),
             getDeduplicationPairsAction(activeVenueId),
+            getInventoryItemsAction(activeVenueId),
+            getCashBalancesAction(activeVenueId),
           ])
 
           if (isMounted) {
             setTransactions(dbTxs)
             setDeduplicationPairs(dbPairs)
+            setInventory(dbInventory)
+            setCashBalances((prev) => ({
+              ...prev,
+              [activeVenueId]: dbCash,
+            }))
           }
         }
       } catch (err) {
@@ -173,6 +190,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // 2. Load venue-specific transactions & pairs on venue change
@@ -182,14 +200,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     async function loadVenueData() {
       try {
-        const [dbTxs, dbPairs] = await Promise.all([
+        const [dbTxs, dbPairs, dbInventory, dbCash] = await Promise.all([
           getTransactionsAction(selectedVenueId),
           getDeduplicationPairsAction(selectedVenueId),
+          getInventoryItemsAction(selectedVenueId),
+          getCashBalancesAction(selectedVenueId),
         ])
 
         if (isMounted) {
           setTransactions(dbTxs)
           setDeduplicationPairs(dbPairs)
+          setInventory(dbInventory)
+          setCashBalances((prev) => ({
+            ...prev,
+            [selectedVenueId]: dbCash,
+          }))
         }
       } catch (err) {
         console.error(`Failed to load data for venue ${selectedVenueId}:`, err)
@@ -201,7 +226,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false
     }
-  }, [selectedVenueId])
+  }, [selectedVenueId, setCashBalances, setInventory])
 
   const selectVenue = useCallback(
     (venueId: string) => {
@@ -353,42 +378,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   )
 
   const setCashBalance = useCallback(
-    (venueId: string, monthKey: string, amount: number) => {
-      setCashBalances((prev) => ({
-        ...prev,
-        [venueId]: {
-          ...(prev[venueId] || {}),
-          [monthKey]: amount,
-        },
-      }))
+    async (venueId: string, monthKey: string, amount: number) => {
+      try {
+        await setCashBalanceAction(venueId, monthKey, amount)
+        setCashBalances((prev) => ({
+          ...prev,
+          [venueId]: {
+            ...(prev[venueId] || {}),
+            [monthKey]: amount,
+          },
+        }))
+      } catch (err) {
+        console.error('Failed to update cash balance in PostgreSQL:', err)
+      }
     },
     [setCashBalances]
   )
 
   const addInventoryItem = useCallback(
-    (item: Omit<InventoryItem, 'id' | 'createdAt'>) => {
-      const newItem: InventoryItem = {
-        ...item,
-        id: generateId(),
-        createdAt: new Date().toISOString(),
+    async (item: Omit<InventoryItem, 'id' | 'createdAt'>) => {
+      try {
+        const created = await createInventoryItemAction({
+          ...item,
+          venueId: selectedVenueId,
+        })
+        setInventory((prev) => [...prev, created])
+      } catch (err) {
+        console.error('Failed to create inventory item in PostgreSQL:', err)
       }
-      setInventory((prev) => [...prev, newItem])
     },
-    [setInventory]
+    [selectedVenueId, setInventory]
   )
 
   const updateInventoryItem = useCallback(
-    (id: string, data: Partial<InventoryItem>) => {
-      setInventory((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, ...data } : item))
-      )
+    async (id: string, data: Partial<InventoryItem>) => {
+      try {
+        const updated = await updateInventoryItemAction(id, data)
+        setInventory((prev) =>
+          prev.map((item) => (item.id === id ? updated : item))
+        )
+      } catch (err) {
+        console.error(`Failed to update inventory item ${id}:`, err)
+      }
     },
     [setInventory]
   )
 
   const deleteInventoryItem = useCallback(
-    (id: string) => {
-      setInventory((prev) => prev.filter((item) => item.id !== id))
+    async (id: string) => {
+      try {
+        await deleteInventoryItemAction(id)
+        setInventory((prev) => prev.filter((item) => item.id !== id))
+      } catch (err) {
+        console.error(`Failed to delete inventory item ${id}:`, err)
+      }
     },
     [setInventory]
   )

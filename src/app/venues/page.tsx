@@ -23,7 +23,6 @@ import {
   Trash2,
   MapPin,
   FileText,
-  Settings,
   BarChart3,
 } from 'lucide-react'
 

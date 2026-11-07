@@ -91,19 +91,19 @@ model FileUpload {
 }
 
 model InventoryItem {
-  id          String   @id @default(cuid())
-  venueId     String
-  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  name        String
-  category    String
-  unit        String
-  expectedQty Float
-  actualQty   Float
-  costPerUnit Float
-  lastChecked DateTime @default(now())
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  venueId      String
+  venue        Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  period       String   @default("2026-11")
+  category     String
+  name         String
+  unit         String
+  expectedQty  Float
+  actualQty    Float
+  pricePerUnit Float
+  createdAt    DateTime @default(now())
 
-  @@index([venueId])
+  @@index([venueId, period])
 }
 
 model CashBalance {

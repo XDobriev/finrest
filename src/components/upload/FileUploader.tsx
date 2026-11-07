@@ -6,17 +6,29 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X, Loader2 } from 'lucide-react'
-import { parseExcelFile, type ParseResult } from '@/lib/parsers'
+import { parseExcelFile, parse1CClientBank, type ParseResult } from '@/lib/parsers'
 import type { DataSource } from '@/types'
 import { SOURCE_LABELS } from '@/types'
 
 interface FileUploaderProps {
   source: DataSource
-  venueId: string
+  venueName?: string
   onParsed: (result: ParseResult) => void
 }
 
-export function FileUploader({ source, venueId, onParsed }: FileUploaderProps) {
+function decodeTextFile(buffer: ArrayBuffer): string {
+  const utf8Text = new TextDecoder('utf-8').decode(buffer)
+  if (utf8Text.includes('1CClientBankExchange') && !utf8Text.includes('')) {
+    return utf8Text
+  }
+  try {
+    return new TextDecoder('windows-1251').decode(buffer)
+  } catch {
+    return utf8Text
+  }
+}
+
+export function FileUploader({ source, venueName, onParsed }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [parsing, setParsing] = useState(false)
@@ -28,13 +40,38 @@ export function FileUploader({ source, venueId, onParsed }: FileUploaderProps) {
       setParsing(true)
       setParseResult(null)
 
-      const buffer = await f.arrayBuffer()
-      const result = parseExcelFile(buffer, source)
-      setParseResult(result)
-      setParsing(false)
-      onParsed(result)
+      try {
+        const buffer = await f.arrayBuffer()
+        let result: ParseResult
+
+        if (f.name.toLowerCase().endsWith('.txt') || source === 'bank') {
+          const text = decodeTextFile(buffer)
+          if (text.includes('1CClientBankExchange')) {
+            result = parse1CClientBank(text, venueName)
+          } else {
+            result = parseExcelFile(buffer, source)
+          }
+        } else {
+          result = parseExcelFile(buffer, source)
+        }
+
+        setParseResult(result)
+        setParsing(false)
+        onParsed(result)
+      } catch (err) {
+        const errResult: ParseResult = {
+          success: false,
+          rows: [],
+          totalRows: 0,
+          errors: [`Ошибка чтения файла: ${err instanceof Error ? err.message : String(err)}`],
+          warnings: [],
+        }
+        setParseResult(errResult)
+        setParsing(false)
+        onParsed(errResult)
+      }
     },
-    [source, onParsed]
+    [source, venueName, onParsed]
   )
 
   const handleDrop = useCallback(
@@ -115,13 +152,15 @@ export function FileUploader({ source, venueId, onParsed }: FileUploaderProps) {
               Перетащите файл сюда
             </p>
             <p className="text-xs text-slate-500 mb-3">
-              Excel (.xlsx, .xls) или CSV
+              {source === 'bank'
+                ? 'Выписка 1C (.txt), Excel (.xlsx, .xls) или CSV'
+                : 'Excel (.xlsx, .xls) или CSV'}
             </p>
             <label className="inline-block">
               <input
                 type="file"
                 className="hidden"
-                accept=".xlsx,.xls,.csv"
+                accept=".xlsx,.xls,.csv,.txt"
                 onChange={handleInputChange}
               />
               <Button variant="outline" size="sm" type="button">

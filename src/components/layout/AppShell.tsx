@@ -3,7 +3,6 @@
 import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Sidebar } from './Sidebar'
-import { Header } from './Header'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { AppProvider } from '@/context/AppContext'
 import { TooltipProvider } from '@/components/ui/tooltip'

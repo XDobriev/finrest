@@ -23,8 +23,8 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { useApp } from '@/context/AppContext'
 import { formatCurrency, getSourceColor, getStatusColor } from '@/lib/utils'
-import { SOURCE_LABELS, CATEGORY_LABELS, type ExpenseCategory, type DataSource, type TransactionStatus } from '@/types'
-import { ArrowUpRight, ArrowDownRight, Search, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { SOURCE_LABELS, CATEGORY_LABELS } from '@/types'
+import { ArrowUpRight, ArrowDownRight, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 
 type SortField = 'date' | 'amount' | 'counterparty' | 'source'
 type SortDir = 'asc' | 'desc'
@@ -285,8 +285,14 @@ export default function TransactionsPage() {
                   ))}
                   {paginated.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-slate-500">
-                        Нет транзакций по заданным фильтрам
+                      <TableCell colSpan={8} className="text-center py-12 text-slate-500">
+                        <div className="flex flex-col items-center justify-center space-y-2">
+                          <Search className="h-8 w-8 text-slate-300" />
+                          <p className="text-sm font-medium text-slate-700">Транзакции не найдены</p>
+                          <p className="text-xs text-slate-400 max-w-sm">
+                            Попробуйте сбросить фильтры или загрузите выписку на странице загрузки
+                          </p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}

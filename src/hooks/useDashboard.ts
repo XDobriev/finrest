@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useApp } from '@/context/AppContext'
 import type { DailyMetric, CategoryBreakdown, DashboardMetrics } from '@/types'
-import { CATEGORY_LABELS, CATEGORY_COLORS, type ExpenseCategory } from '@/types'
+import type { ExpenseCategory } from '@/types'
 
 export function useDashboard() {
   const { transactions, selectedVenueId, dateRange } = useApp()

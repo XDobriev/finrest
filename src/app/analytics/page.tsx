@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { useApp } from '@/context/AppContext'
 import { useDashboard } from '@/hooks/useDashboard'
 import { formatCurrency } from '@/lib/utils'
-import { CATEGORY_LABELS, CATEGORY_COLORS, SOURCE_LABELS, type ExpenseCategory, type DataSource } from '@/types'
+import { CATEGORY_LABELS, CATEGORY_COLORS, SOURCE_LABELS, type DataSource } from '@/types'
 import {
   BarChart,
   Bar,
@@ -27,7 +27,7 @@ import { BarChart3, TrendingUp, PieChartIcon } from 'lucide-react'
 
 export default function AnalyticsPage() {
   const { transactions, selectedVenueId, dateRange } = useApp()
-  const { dailyMetrics, categoryBreakdown, metrics } = useDashboard()
+  const { dailyMetrics, categoryBreakdown } = useDashboard()
 
   // Source breakdown
   const sourceBreakdown = useMemo(() => {
@@ -61,7 +61,6 @@ export default function AnalyticsPage() {
 
   // Stacked bar data by source per day
   const stackedBarData = useMemo(() => {
-    const sources: DataSource[] = ['iiko', 'bank', 'admin', 'manual']
     const dateMap = new Map<string, Record<string, number>>()
 
     transactions
@@ -127,14 +126,14 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Category pie chart */}
           <Card className="rounded-lg shadow-sm">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <PieChartIcon className="h-5 w-5 text-slate-500" />
                 <CardTitle className="text-base font-semibold text-slate-900">
-                  Структура расходов по категориям
+                  По категориям
                 </CardTitle>
               </div>
             </CardHeader>
@@ -175,6 +174,52 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
+          {/* Source breakdown */}
+          <Card className="rounded-lg shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-slate-500" />
+                <CardTitle className="text-base font-semibold text-slate-900">
+                  Каналы учета
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-4 pt-2">
+                {sourceBreakdown.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-8 text-center">Нет расходов за выбранный период</p>
+                ) : (
+                  sourceBreakdown.map((s) => (
+                    <div key={s.source} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs font-normal">
+                            {s.label}
+                          </Badge>
+                          <span className="text-xs text-slate-500 font-mono">
+                            {s.percent.toFixed(1)}%
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-900 font-mono">
+                          {formatCurrency(s.amount)}
+                        </p>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${s.percent}%`,
+                            backgroundColor: sourceColors[s.source] || '#64748B',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Top 5 expenses */}
           <Card className="rounded-lg shadow-sm">
             <CardHeader className="pb-3">
@@ -199,7 +244,7 @@ export default function AnalyticsPage() {
                             {i + 1}
                           </span>
                           <div>
-                            <p className="text-sm font-medium text-slate-900">{tx.counterparty}</p>
+                            <p className="text-sm font-medium text-slate-900 truncate max-w-[140px]">{tx.counterparty}</p>
                             <p className="text-xs text-slate-500">{new Date(tx.date).toLocaleDateString('ru-RU')}</p>
                           </div>
                         </div>

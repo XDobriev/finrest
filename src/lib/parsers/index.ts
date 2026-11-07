@@ -1,12 +1,14 @@
 import * as XLSX from 'xlsx'
-import type { DataSource } from '@/types'
+import type { DataSource, ExpenseCategory } from '@/types'
+import { categorizeTransaction, detectTransactionType } from '@/lib/categorizer'
+export { parse1CClientBank, type BankStatement1CMeta, type BankParseResult } from './1c-bank'
 
 export interface ParsedRow {
   date: string
   amount: number
   counterparty: string
   description: string
-  category: string
+  category: ExpenseCategory
   type: 'income' | 'expense'
 }
 
@@ -65,7 +67,7 @@ function findColumn(headers: string[], candidates: string[]): number {
 
 export function parseExcelFile(
   buffer: ArrayBuffer,
-  source: DataSource
+  source?: DataSource
 ): ParseResult {
   const result: ParseResult = {
     success: false,
@@ -97,33 +99,46 @@ export function parseExcelFile(
     // Detect column mapping based on source type
     const headers = Object.keys(rawData[0])
 
-    const dateCol = findColumn(headers, ['дата', 'date', 'дат', 'дт'])
-    const amountCol = findColumn(headers, ['сумма', 'amount', 'сум', 'стоимость', 'total'])
+    const dateCol = findColumn(headers, ['дата', 'date', 'дат', 'дт', 'период'])
+    const amountCol = findColumn(headers, ['сумма', 'amount', 'сум', 'стоимость', 'выручка', 'total'])
     const counterpartyCol = findColumn(headers, [
       'контрагент',
       'поставщик',
       'counterparty',
       'vendor',
       'наименование',
+      'товар',
+      'блюдо',
+      'клиент',
       'name',
-      'описание',
     ])
     const descCol = findColumn(headers, [
       'описание',
       'description',
       'назначение',
       'комментарий',
+      'категория',
+      'группа',
       'comment',
     ])
+    const typeCol = findColumn(headers, ['тип', 'type', 'операция', 'направление'])
 
     if (dateCol === -1) {
       result.errors.push('Не найдена колонка с датой. Ожидаемые названия: Дата, Date')
     }
     if (amountCol === -1) {
-      result.errors.push('Не найдена колонка с суммой. Ожидаемые названия: Сумма, Amount')
+      result.errors.push('Не найдена колонка с суммой. Ожидаемые названия: Сумма, Выручка, Amount')
     }
 
     if (result.errors.length > 0) return result
+
+    // Check if the sheet represents sales/revenue report (e.g. iiko sales report)
+    const headersJoined = headers.join(' ').toLowerCase()
+    const isSalesReport =
+      (source === 'iiko' && headersJoined.includes('выручка')) ||
+      headersJoined.includes('выручка') ||
+      headersJoined.includes('продаж') ||
+      headersJoined.includes('кассовая смена')
 
     // Parse rows
     for (let i = 0; i < rawData.length; i++) {
@@ -133,6 +148,7 @@ export function parseExcelFile(
       const amountVal = normalizeAmount(amountCol >= 0 ? rowValues[amountCol] : null)
       const counterpartyVal = counterpartyCol >= 0 ? String(rowValues[counterpartyCol] || '').trim() : ''
       const descVal = descCol >= 0 ? String(rowValues[descCol] || '').trim() : counterpartyVal
+      const rawType = typeCol >= 0 ? String(rowValues[typeCol] || '').toLowerCase() : ''
 
       if (!dateVal) {
         result.warnings.push(`Строка ${i + 2}: не удалось распознать дату`)
@@ -143,13 +159,26 @@ export function parseExcelFile(
         continue
       }
 
+      let txType: 'income' | 'expense' = 'expense'
+      if (rawType.includes('доход') || rawType.includes('приход') || rawType.includes('income')) {
+        txType = 'income'
+      } else if (rawType.includes('расход') || rawType.includes('списание') || rawType.includes('expense')) {
+        txType = 'expense'
+      } else if (isSalesReport) {
+        txType = 'income'
+      } else {
+        txType = detectTransactionType(`${counterpartyVal} ${descVal}`, amountVal, false)
+      }
+
+      const category = txType === 'income' ? 'food' : categorizeTransaction(counterpartyVal, descVal)
+
       result.rows.push({
         date: dateVal,
         amount: Math.abs(amountVal),
-        counterparty: counterpartyVal || 'Не указан',
-        description: descVal || '—',
-        category: 'other',
-        type: amountVal >= 0 ? 'expense' : 'expense', // Will be determined by source
+        counterparty: counterpartyVal || (txType === 'income' ? 'Выручка ресторана' : 'Не указан'),
+        description: descVal || (txType === 'income' ? 'Выручка кассовой смены' : '—'),
+        category,
+        type: txType,
       })
     }
 

@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { useApp } from '@/context/AppContext'
-import { Settings as SettingsIcon, Sliders, History, User, Shield, Save, Download, Upload, AlertTriangle } from 'lucide-react'
+import { Sliders, History, User, Shield, Save, Download, Upload, AlertTriangle } from 'lucide-react'
 
 export default function SettingsPage() {
   const {
