@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  name         String?
+  role         String   @default("OWNER")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  venues       Venue[]
+}
+
+model Venue {
+  id                     String              @id @default(cuid())
+  name                   String
+  address                String?
+  dateToleranceDays      Int                 @default(1)
+  amountTolerancePercent Float               @default(5.0)
+  fuzzyMatchThreshold    Float               @default(0.7)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  ownerId                String?
+  owner                  User?               @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  transactions           Transaction[]
+  deduplicationPairs     DeduplicationPair[]
+  fileUploads            FileUpload[]
+  inventoryItems         InventoryItem[]
+  cashBalances           CashBalance[]
+}
+
+model Transaction {
+  id             String              @id @default(cuid())
+  venueId        String
+  venue          Venue               @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  source         String              // iiko | bank | admin | manual
+  date           DateTime
+  amount         Float
+  type           String              // income | expense
+  category       String              // food | bar | salary | rent | utilities | marketing | other
+  counterparty   String
+  description    String
+  status         String              @default("unique") // unique | duplicate | pending_review
+  duplicateOfId  String?
+  originalFileId String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  leftPairs      DeduplicationPair[] @relation("LeftTransaction")
+  rightPairs     DeduplicationPair[] @relation("RightTransaction")
+
+  @@index([venueId, date])
+  @@index([venueId, status])
+}
+
+model DeduplicationPair {
+  id               String      @id @default(cuid())
+  venueId          String
+  venue            Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  leftTxId         String
+  leftTransaction  Transaction @relation("LeftTransaction", fields: [leftTxId], references: [id], onDelete: Cascade)
+  rightTxId        String
+  rightTransaction Transaction @relation("RightTransaction", fields: [rightTxId], references: [id], onDelete: Cascade)
+  matchScore       Int
+  matchReasons     String[]
+  status           String      @default("pending") // pending | merged | skipped
+  resolvedAt       DateTime?
+  createdAt        DateTime    @default(now())
+
+  @@index([venueId, status])
+}
+
+model FileUpload {
+  id           String   @id @default(cuid())
+  venueId      String
+  venue        Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  source       String
+  fileName     String
+  fileSize     Int
+  rowCount     Int
+  status       String   // processing | completed | error
+  errorMessage String?
+  uploadedAt   DateTime @default(now())
+
+  @@index([venueId])
+}
+
+model InventoryItem {
+  id          String   @id @default(cuid())
+  venueId     String
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  name        String
+  category    String
+  unit        String
+  expectedQty Float
+  actualQty   Float
+  costPerUnit Float
+  lastChecked DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([venueId])
+}
+
+model CashBalance {
+  id        String   @id @default(cuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  monthKey  String   // e.g. "2025-01"
+  amount    Float
+  updatedAt DateTime @updatedAt
+
+  @@unique([venueId, monthKey])
+}

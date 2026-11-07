@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ export default function SettingsPage() {
   } = useApp()
 
   const venue = venues.find((v) => v.id === selectedVenueId)
+  const [prevVenueId, setPrevVenueId] = useState(venue?.id)
   const [settings, setSettings] = useState(venue?.deduplicationSettings || {
     dateToleranceDays: 1,
     amountTolerancePercent: 5,
@@ -30,11 +31,10 @@ export default function SettingsPage() {
   })
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => {
-    if (venue) {
-      setSettings(venue.deduplicationSettings)
-    }
-  }, [venue])
+  if (venue && venue.id !== prevVenueId) {
+    setPrevVenueId(venue.id)
+    setSettings(venue.deduplicationSettings)
+  }
 
   const handleSave = () => {
     if (selectedVenueId) {
