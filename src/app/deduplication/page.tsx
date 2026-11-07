@@ -7,22 +7,22 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { useApp } from '@/context/AppContext'
-import { findDuplicates } from '@/lib/deduplication/matcher'
-import { Search, Copy, Play, CheckCircle2, Clock, Filter } from 'lucide-react'
+import { Search, Copy, Play, CheckCircle2, Clock, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 export default function DeduplicationPage() {
   const {
     selectedVenueId,
     venues,
-    transactions,
     deduplicationPairs,
     resolveDeduplicationPair,
+    runDeduplication,
   } = useApp()
 
   const [filter, setFilter] = useState<'all' | 'pending' | 'merged' | 'skipped'>('pending')
   const [search, setSearch] = useState('')
   const [hasRun, setHasRun] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
 
   const venue = venues.find((v) => v.id === selectedVenueId)
   const venuePairs = deduplicationPairs.filter((p) => p.venueId === selectedVenueId)
@@ -52,11 +52,15 @@ export default function DeduplicationPage() {
   const mergedCount = venuePairs.filter((p) => p.status === 'merged').length
   const totalCount = venuePairs.length
 
-  const handleRunDeduplication = () => {
+  const handleRunDeduplication = async () => {
     if (!venue) return
-    const settings = venue.deduplicationSettings
-    // The algorithm already ran in context — for demo we just toggle the view
-    setHasRun(true)
+    setIsRunning(true)
+    try {
+      await runDeduplication()
+      setHasRun(true)
+    } finally {
+      setIsRunning(false)
+    }
   }
 
   return (
@@ -112,9 +116,9 @@ export default function DeduplicationPage() {
                 </p>
               </div>
             </div>
-            <Button onClick={handleRunDeduplication} className="gap-2">
-              <Search className="h-4 w-4" />
-              Найти дубликаты
+            <Button onClick={handleRunDeduplication} disabled={isRunning} className="gap-2">
+              {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              {isRunning ? 'Поиск...' : 'Найти дубликаты'}
             </Button>
           </CardContent>
         </Card>

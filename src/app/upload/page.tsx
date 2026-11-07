@@ -39,7 +39,7 @@ export default function UploadPage() {
       if (rows.length === 0) continue
 
       for (const row of rows) {
-        addTransaction({
+        await addTransaction({
           venueId: selectedVenueId,
           source,
           date: row.date,

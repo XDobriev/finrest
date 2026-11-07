@@ -36,9 +36,9 @@ export default function VenuesPage() {
   const [editName, setEditName] = useState('')
   const [editAddress, setEditAddress] = useState('')
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newName.trim()) return
-    addVenue(newName.trim(), newAddress.trim() || undefined)
+    await addVenue(newName.trim(), newAddress.trim() || undefined)
     setNewName('')
     setNewAddress('')
   }
@@ -51,10 +51,14 @@ export default function VenuesPage() {
     setEditAddress(venue.address || '')
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editVenueId || !editName.trim()) return
-    updateVenue(editVenueId, { name: editName.trim(), address: editAddress.trim() || undefined })
+    await updateVenue(editVenueId, { name: editName.trim(), address: editAddress.trim() || undefined })
     setEditVenueId(null)
+  }
+
+  const handleDelete = async (venueId: string) => {
+    await deleteVenue(venueId)
   }
 
   const getVenueStats = (venueId: string) => {
@@ -180,7 +184,7 @@ export default function VenuesPage() {
                       variant="outline"
                       size="sm"
                       className="gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
-                      onClick={() => deleteVenue(venue.id)}
+                      onClick={() => handleDelete(venue.id)}
                     >
                       <Trash2 className="h-3 w-3" />
                       Удалить

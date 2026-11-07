@@ -36,9 +36,9 @@ export default function SettingsPage() {
     setSettings(venue.deduplicationSettings)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (selectedVenueId) {
-      updateDeduplicationSettings(selectedVenueId, settings)
+      await updateDeduplicationSettings(selectedVenueId, settings)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     }
