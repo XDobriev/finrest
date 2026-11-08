@@ -1,10 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { prisma } from '../../src/lib/db/client'
-import {
-  checkVenueLimit,
-  calculateSavings,
-} from '../../src/lib/billing/plans'
+import { checkVenueLimit } from '../../src/lib/billing/limits'
+import { calculateSavings } from '../../src/lib/billing/plans'
 import { YooKassaClient } from '../../src/lib/billing/yookassa'
 import { NextRequest } from 'next/server'
 import { POST as yookassaWebhookHandler } from '../../src/app/api/webhooks/yookassa/route'
