@@ -25,7 +25,7 @@ import {
   LineChart,
   Line,
 } from 'recharts'
-import { BarChart3, TrendingUp, PieChartIcon, UploadCloud, FileQuestion } from 'lucide-react'
+import { BarChart3, TrendingUp, PieChartIcon, UploadCloud, FileQuestion, UtensilsCrossed, ArrowRight } from 'lucide-react'
 
 export default function AnalyticsPage() {
   const { transactions, selectedVenueId, dateRange } = useApp()
@@ -103,6 +103,34 @@ export default function AnalyticsPage() {
     <div>
       <Header title="Аналитика" onMenuToggle={() => {}} />
       <main className="p-6 space-y-6">
+        {/* Banner to Phase 8: Menu Engineering & Food Cost Engine */}
+        <div className="p-4 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-emerald-600 text-white shrink-0">
+              <UtensilsCrossed className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-emerald-950">
+                  Инженерия меню и Food Cost Engine
+                </span>
+                <Badge className="bg-emerald-600 text-white text-[10px]">
+                  Фаза 8
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Матрица Касаваны-Смита («Звёзды», «Лошадки», «Загадки», «Собаки»), ABC/XYZ анализ и фиксация расхождений фудкоста
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/analytics/menu"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold transition shrink-0"
+          >
+            Открыть матрицу меню
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
         {isLoading ? (
           <div className="space-y-6">
             <Card className="p-5">
