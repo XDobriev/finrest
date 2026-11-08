@@ -205,3 +205,71 @@ export interface DDSReportData {
   netCashFlow: number
   closingBalance: number
 }
+
+export interface BalanceSnapshot {
+  id: string
+  venueId: string
+  monthKey: string
+  cashAmount: number
+  inventoryFood: number
+  inventoryBar: number
+  accountsReceivable: number
+  accountsPayable: number
+  payrollPayable: number
+  taxesPayable: number
+  guestPrepayments: number
+  safetyReserveDays: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type LiquidityStatus = 'healthy' | 'warning' | 'critical'
+
+export interface BalanceReportData {
+  venueName: string
+  monthKey: string
+  period: string
+  assets: {
+    cashAmount: number
+    inventoryFood: number
+    inventoryBar: number
+    accountsReceivable: number
+    totalCurrentAssets: number
+  }
+  liabilities: {
+    accountsPayable: number
+    payrollPayable: number
+    taxesPayable: number
+    guestPrepayments: number
+    totalCurrentLiabilities: number
+  }
+  workingCapital: {
+    nwc: number
+    currentRatio: number
+    liquidityStatus: LiquidityStatus
+    liquidityLabel: string
+  }
+  safeDividends: {
+    dailyOpex: number
+    safetyReserveDays: number
+    safetyBuffer: number
+    maxSafeDividend: number
+    isSafe: boolean
+    deficitAmount: number
+  }
+}
+
+export interface UpsertBalanceInput {
+  venueId: string
+  monthKey: string
+  cashAmount: number
+  inventoryFood: number
+  inventoryBar: number
+  accountsReceivable: number
+  accountsPayable: number
+  payrollPayable: number
+  taxesPayable: number
+  guestPrepayments: number
+  safetyReserveDays?: number
+}
+

@@ -37,6 +37,7 @@ model Venue {
   fileUploads            FileUpload[]
   inventoryItems         InventoryItem[]
   cashBalances           CashBalance[]
+  balanceSnapshots       BalanceSnapshot[]
 }
 
 model Transaction {
@@ -119,4 +120,29 @@ model CashBalance {
   updatedAt DateTime @updatedAt
 
   @@unique([venueId, monthKey])
+}
+
+model BalanceSnapshot {
+  id                 String   @id @default(cuid())
+  venueId            String
+  venue              Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  monthKey           String   // e.g. "2026-11"
+
+  cashAmount         Float    @default(0)
+  inventoryFood      Float    @default(0)
+  inventoryBar       Float    @default(0)
+  accountsReceivable Float    @default(0)
+
+  accountsPayable    Float    @default(0)
+  payrollPayable     Float    @default(0)
+  taxesPayable       Float    @default(0)
+  guestPrepayments   Float    @default(0)
+
+  safetyReserveDays  Int      @default(10)
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([venueId, monthKey])
+  @@index([venueId])
 }
