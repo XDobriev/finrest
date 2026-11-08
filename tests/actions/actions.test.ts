@@ -85,6 +85,50 @@ test('Server Actions: transactions and real deduplication run', async () => {
   await deleteTransactionAction(tx2.id)
 })
 
+test('Server Actions: deduplication detects duplicate income transactions (e.g. iiko sales vs bank acquiring)', async () => {
+  // Income 1: Daily shift sales from iiko
+  const inc1 = await createTransactionAction({
+    venueId: 'venue-1',
+    source: 'iiko',
+    date: '2026-11-08',
+    amount: 145000,
+    type: 'income',
+    category: 'other',
+    counterparty: 'Касса iiko',
+    description: 'Выручка кассовой смены за 08.11.2026',
+    status: 'unique',
+  })
+
+  // Income 2: Acquiring bank payout
+  const inc2 = await createTransactionAction({
+    venueId: 'venue-1',
+    source: 'bank',
+    date: '2026-11-08',
+    amount: 145000,
+    type: 'income',
+    category: 'other',
+    counterparty: 'АО Т-Банк Эквайринг',
+    description: 'Возмещение по эквайрингу за 08.11.2026',
+    status: 'unique',
+  })
+
+  try {
+    const pairs = await runDeduplicationAction('venue-1')
+    const matched = pairs.find(
+      (p) =>
+        (p.leftTransaction.id === inc1.id && p.rightTransaction.id === inc2.id) ||
+        (p.leftTransaction.id === inc2.id && p.rightTransaction.id === inc1.id)
+    )
+
+    assert.ok(matched, 'Deduplication must detect matching income transactions')
+    assert.equal(matched.leftTransaction.type, 'income')
+    assert.equal(matched.rightTransaction.type, 'income')
+  } finally {
+    await deleteTransactionAction(inc1.id)
+    await deleteTransactionAction(inc2.id)
+  }
+})
+
 test('Server Actions: inventory item lifecycle', async () => {
   const item = await createInventoryItemAction({
     venueId: 'venue-1',

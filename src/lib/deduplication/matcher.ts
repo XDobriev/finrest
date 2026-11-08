@@ -53,22 +53,22 @@ export function findDuplicates(
   venueId: string,
   settings: DeduplicationSettings
 ): DeduplicationPair[] {
-  const venueExpenses = transactions.filter(
+  // Support both expense and income deduplication (e.g. iiko shift sales vs bank acquiring payout)
+  const venueCandidates = transactions.filter(
     (t) =>
       t.venueId === venueId &&
-      t.type === 'expense' &&
       t.status !== 'duplicate'
   )
 
   const pairs: DeduplicationPair[] = []
 
-  for (let i = 0; i < venueExpenses.length; i++) {
-    for (let j = i + 1; j < venueExpenses.length; j++) {
-      const a = venueExpenses[i]
-      const b = venueExpenses[j]
+  for (let i = 0; i < venueCandidates.length; i++) {
+    for (let j = i + 1; j < venueCandidates.length; j++) {
+      const a = venueCandidates[i]
+      const b = venueCandidates[j]
 
-      // Don't match from same source (it would be a real duplicate within one source)
-      // Actually we do want to match across sources — that's the point
+      // Only match transactions of the same direction (income with income, expense with expense)
+      if (a.type !== b.type) continue
 
       const { score, reasons } = calculateMatchScore(a, b, settings)
 
