@@ -9,6 +9,7 @@ import {
   getTransactionsAction,
   getTransactionByIdAction,
   createTransactionAction,
+  createTransactionsBatchAction,
   deleteTransactionAction,
 } from '../../src/app/actions/transactions'
 import { runDeduplicationAction, resolveDeduplicationPairAction } from '../../src/app/actions/deduplication'
@@ -137,6 +138,45 @@ test('Server Actions: deduplication detects duplicate income transactions (e.g. 
     await deleteTransactionAction(inc1.id)
     await deleteTransactionAction(inc2.id)
   }
+})
+
+test('Server Actions: createTransactionsBatchAction batch inserts multiple transactions in 1 DB call', async () => {
+  const batchData = [
+    {
+      venueId: 'venue-1',
+      source: 'admin' as const,
+      date: '2026-11-08',
+      amount: 12000,
+      type: 'expense' as const,
+      category: 'household' as const,
+      counterparty: 'ООO ПакетМаркет',
+      description: 'Одноразовая посуда партия 1',
+    },
+    {
+      venueId: 'venue-1',
+      source: 'admin' as const,
+      date: '2026-11-08',
+      amount: 14000,
+      type: 'expense' as const,
+      category: 'household' as const,
+      counterparty: 'ООO ПакетМаркет',
+      description: 'Одноразовая посуда партия 2',
+    },
+  ]
+
+  const result = await createTransactionsBatchAction(batchData)
+  assert.equal(result.success, true)
+  assert.equal(result.count, 2)
+
+  const list = await getTransactionsAction('venue-1')
+  const found1 = list.find((t) => t.description === 'Одноразовая посуда партия 1')
+  const found2 = list.find((t) => t.description === 'Одноразовая посуда партия 2')
+  assert.ok(found1)
+  assert.ok(found2)
+
+  // Clean up
+  if (found1) await deleteTransactionAction(found1.id)
+  if (found2) await deleteTransactionAction(found2.id)
 })
 
 test('Server Actions: inventory item lifecycle', async () => {
