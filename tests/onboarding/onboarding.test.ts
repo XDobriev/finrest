@@ -95,5 +95,16 @@ describe('Onboarding Actions & Demo Seeding Lifecycle', () => {
     const cashBalance = await prisma.cashBalance.findFirst({ where: { venueId: testVenueId } })
     assert.ok(cashBalance !== null, 'Should seed cash balance snapshot')
     assert.ok(cashBalance.amount > 0, 'Cash balance amount should be positive')
+
+    // Verify distinct transaction dates (not clamped to single day)
+    const txs = await prisma.transaction.findMany({ where: { venueId: testVenueId } })
+    const distinctDates = new Set(txs.map((t) => t.date.toISOString().split('T')[0]))
+    assert.ok(distinctDates.size >= 10, `Expected at least 10 distinct dates across the month, got ${distinctDates.size}`)
+
+    // Idempotency: re-running seedDemoDataAction replaces/refreshes demo data instead of doubling it
+    const reSeedResult = await seedDemoDataAction(testVenueId, testUser.id)
+    assert.strictEqual(reSeedResult.success, true)
+    const txCountAfter = await prisma.transaction.count({ where: { venueId: testVenueId } })
+    assert.strictEqual(txCountAfter, reSeedResult.transactionsCount, 'Seeding again should not double transactions')
   })
 })

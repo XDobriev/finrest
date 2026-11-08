@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -61,6 +62,7 @@ import { Landmark } from 'lucide-react'
 import type { IikoOrganization } from '@/lib/iiko/types'
 
 export default function SettingsPage() {
+  const router = useRouter()
   const {
     venues,
     selectedVenueId,
@@ -1046,6 +1048,8 @@ export default function SettingsPage() {
                 setOnboardingStatus((prev) =>
                   prev ? { ...prev, completed: true, step: 4 } : null
                 )
+                router.push('/')
+                router.refresh()
               }}
               onCancel={() => setWizardModalOpen(false)}
             />

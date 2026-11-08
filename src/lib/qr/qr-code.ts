@@ -93,6 +93,13 @@ const FORMAT_BITS_M = [
   0x5412, 0x5125, 0x5e7c, 0x5b4b, 0x45f9, 0x40ce, 0x4f97, 0x4aa0,
 ]
 
+const VERSION_INFO: Record<number, number> = {
+  7: 0x07c94,
+  8: 0x085bc,
+  9: 0x09a99,
+  10: 0x0a4d3,
+}
+
 export interface QRCodeMatrix {
   size: number
   modules: boolean[][]
@@ -287,6 +294,16 @@ export function generateQRCodeMatrix(text: string): QRCodeMatrix {
     if (matrix[i][8] === null) matrix[i][8] = false
   }
 
+  // 5b. Reserve Version Information areas (Versions 7-10)
+  if (selectedVersion >= 7) {
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 3; j++) {
+        matrix[i][size - 11 + j] = false
+        matrix[size - 11 + j][i] = false
+      }
+    }
+  }
+
   // 6. Data placement (zigzag)
   let bitIdx = 0
   let right = size - 1
@@ -323,6 +340,20 @@ export function generateQRCodeMatrix(text: string): QRCodeMatrix {
     // Around top-right and bottom-left finders
     if (i < 8) matrix[size - 1 - i][8] = bit
     else matrix[8][size - 15 + i] = bit
+  }
+
+  // 8. Write Version Information (Versions 7-10)
+  if (selectedVersion >= 7) {
+    const vInfo = VERSION_INFO[selectedVersion]
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 3; j++) {
+        const bit = ((vInfo >> (i * 3 + j)) & 1) === 1
+        // Top-right block (rows 0..5, cols size-11..size-9)
+        matrix[i][size - 11 + j] = bit
+        // Bottom-left block (rows size-11..size-9, cols 0..5)
+        matrix[size - 11 + j][i] = bit
+      }
+    }
   }
 
   // Convert to clean boolean array

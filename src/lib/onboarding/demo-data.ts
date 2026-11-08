@@ -39,7 +39,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'iiko',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 2))}`,
+      date: `${year}-${month}-${pad(2)}`,
       amount: 184500,
       type: 'income',
       category: 'other',
@@ -49,7 +49,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 3))}`,
+      date: `${year}-${month}-${pad(3)}`,
       amount: 184500,
       type: 'income',
       category: 'other',
@@ -59,7 +59,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'iiko',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 4))}`,
+      date: `${year}-${month}-${pad(4)}`,
       amount: 215000,
       type: 'income',
       category: 'other',
@@ -69,7 +69,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 5))}`,
+      date: `${year}-${month}-${pad(5)}`,
       amount: 212500,
       type: 'income',
       category: 'other',
@@ -81,7 +81,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 6))}`,
+      date: `${year}-${month}-${pad(6)}`,
       amount: 68500,
       type: 'expense',
       category: 'food',
@@ -91,7 +91,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'admin',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 6))}`,
+      date: `${year}-${month}-${pad(6)}`,
       amount: 68500,
       type: 'expense',
       category: 'food',
@@ -101,7 +101,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 7))}`,
+      date: `${year}-${month}-${pad(7)}`,
       amount: 24300,
       type: 'expense',
       category: 'food',
@@ -111,7 +111,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 8))}`,
+      date: `${year}-${month}-${pad(8)}`,
       amount: 45200,
       type: 'expense',
       category: 'food',
@@ -121,7 +121,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'manual',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 9))}`,
+      date: `${year}-${month}-${pad(9)}`,
       amount: 14800,
       type: 'expense',
       category: 'food',
@@ -133,7 +133,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 10))}`,
+      date: `${year}-${month}-${pad(10)}`,
       amount: 54000,
       type: 'expense',
       category: 'bar',
@@ -143,7 +143,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'admin',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 10))}`,
+      date: `${year}-${month}-${pad(10)}`,
       amount: 54000,
       type: 'expense',
       category: 'bar',
@@ -153,7 +153,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 11))}`,
+      date: `${year}-${month}-${pad(11)}`,
       amount: 32000,
       type: 'expense',
       category: 'bar',
@@ -165,7 +165,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 12))}`,
+      date: `${year}-${month}-${pad(12)}`,
       amount: 145000,
       type: 'expense',
       category: 'salary',
@@ -175,7 +175,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'manual',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 13))}`,
+      date: `${year}-${month}-${pad(13)}`,
       amount: 28000,
       type: 'expense',
       category: 'salary',
@@ -187,7 +187,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 14))}`,
+      date: `${year}-${month}-${pad(14)}`,
       amount: 180000,
       type: 'expense',
       category: 'rent',
@@ -197,7 +197,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 15))}`,
+      date: `${year}-${month}-${pad(15)}`,
       amount: 38400,
       type: 'expense',
       category: 'utilities',
@@ -209,7 +209,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 16))}`,
+      date: `${year}-${month}-${pad(16)}`,
       amount: 22000,
       type: 'expense',
       category: 'marketing',
@@ -219,7 +219,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'bank',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 17))}`,
+      date: `${year}-${month}-${pad(17)}`,
       amount: 16500,
       type: 'expense',
       category: 'household',
@@ -231,7 +231,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'iiko',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 18))}`,
+      date: `${year}-${month}-${pad(18)}`,
       amount: 167000,
       type: 'income',
       category: 'other',
@@ -241,7 +241,7 @@ export function generateDemoDataset(venueId: string): DemoDataset {
     {
       venueId,
       source: 'iiko',
-      date: `${year}-${month}-${pad(Math.min(now.getDate(), 19))}`,
+      date: `${year}-${month}-${pad(19)}`,
       amount: 142000,
       type: 'income',
       category: 'other',

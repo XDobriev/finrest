@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Header } from '@/components/layout/Header'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -9,10 +9,12 @@ import { ExpenseDonut } from '@/components/dashboard/ExpenseDonut'
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useApp } from '@/context/AppContext'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatCurrency } from '@/lib/utils'
+import { getOnboardingStatusAction } from '@/app/actions/onboarding'
 import {
   RussianRuble,
   TrendingDown,
@@ -29,6 +31,24 @@ import {
 export default function DashboardPage() {
   const { venues } = useApp()
   const { metrics, dailyMetrics, categoryBreakdown, transactions, isLoading } = useDashboard()
+  const [showOnboardingBanner, setShowOnboardingBanner] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState(1)
+
+  useEffect(() => {
+    let isMounted = true
+    getOnboardingStatusAction()
+      .then((status) => {
+        if (!isMounted) return
+        if (!status.completed && !sessionStorage.getItem('finrest_dismiss_onboarding_banner')) {
+          setShowOnboardingBanner(true)
+          setOnboardingStep(status.step || 1)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const foodCostStatus: 'good' | 'warning' | 'alert' | undefined =
     metrics.totalRevenue === 0
@@ -91,6 +111,48 @@ export default function DashboardPage() {
     <div>
       <Header title="Дашборд" />
       <main className="p-6 space-y-6">
+        {showOnboardingBanner && (
+          <div className="p-4 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-emerald-600 text-white shrink-0">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-emerald-950">
+                    Интерактивное обучение FinRest
+                  </span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-md">
+                    Шаг {onboardingStep} из 4
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Завершите быструю настройку: выберите способ загрузки данных и привяжите Telegram-бота
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/onboarding"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold transition"
+              >
+                Продолжить обучение
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowOnboardingBanner(false)
+                  sessionStorage.setItem('finrest_dismiss_onboarding_banner', 'true')
+                }}
+                className="text-xs text-slate-500 hover:text-slate-800 h-8"
+              >
+                Скрыть
+              </Button>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -143,4 +143,23 @@ describe('Onboarding Wizard Flow & First-Time Experience', () => {
     assert.strictEqual(statusAfterReset.completed, false)
     assert.strictEqual(statusAfterReset.step, 0)
   })
+
+  test('Step 2: 1C Bank Statement parser rejects corrupted files and supports UTF-8 BOM', async () => {
+    const { parse1CBankStatement } = await import('../../src/lib/parsers/1c-bank')
+
+    // Corrupted non-1C file
+    const corrupted = 'Random text with no header\nFoo=Bar\n123'
+    const resCorrupted = parse1CBankStatement(corrupted)
+    assert.strictEqual(resCorrupted.success, false)
+    assert.strictEqual(resCorrupted.rows.length, 0)
+    assert.ok(resCorrupted.errors.length > 0)
+
+    // Valid 1C with UTF-8 BOM and leading blank line
+    const bomValid = '\uFEFF\r\n1CClientBankExchange\r\nВерсияФормата=1.03\r\nКодировка=Windows\r\nСекцияДокумент=Платежное поручение\r\nНомер=101\r\nДата=15.11.2026\r\nСумма=45000.00\r\nПлательщик=ООО "Ресторан"\r\nПолучатель=ООО "Мясоторг"\r\nНазначениеПлатежа=Оплата за мясо говядина\r\nКонецДокумента\r\nКонецФайла'
+    const resBom = parse1CBankStatement(bomValid)
+    assert.strictEqual(resBom.success, true)
+    assert.strictEqual(resBom.rows.length, 1)
+    assert.strictEqual(resBom.rows[0].amount, 45000)
+    assert.strictEqual(resBom.rows[0].category, 'food')
+  })
 })

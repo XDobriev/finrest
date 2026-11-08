@@ -14,6 +14,7 @@ import {
   updateVenueAction,
 } from '@/app/actions/venues'
 import {
+  getOnboardingStatusAction,
   updateOnboardingStatusAction,
   seedDemoDataAction,
 } from '@/app/actions/onboarding'
@@ -70,7 +71,7 @@ export function OnboardingWizard({
   isModal = false,
 }: OnboardingWizardProps) {
   const router = useRouter()
-  const { venues, selectVenue, addTransactionsBatch, runDeduplication } = useApp()
+  const { venues, selectVenue, addTransactionsBatch, runDeduplication, refreshData } = useApp()
 
   const [step, setStep] = useState(initialStep)
 
@@ -84,6 +85,27 @@ export function OnboardingWizard({
   const [activeVenueId, setActiveVenueId] = useState<string>(() => venues[0]?.id || '')
   const [isCreatingVenue, setIsCreatingVenue] = useState(false)
   const [venueError, setVenueError] = useState<string | null>(null)
+
+  // Restore step from DB / localStorage if initialStep was default
+  useEffect(() => {
+    if (initialStep === 1) {
+      let isMounted = true
+      getOnboardingStatusAction()
+        .then((status) => {
+          if (!isMounted) return
+          if (!status.completed && status.step > 1 && status.step <= 4) {
+            setStep(status.step)
+          }
+          if (status.venueId && !activeVenueId) {
+            setActiveVenueId(status.venueId)
+          }
+        })
+        .catch(() => {})
+      return () => {
+        isMounted = false
+      }
+    }
+  }, [initialStep])
 
   // Step 2: Data Ingestion
   const [ingestionTab, setIngestionTab] = useState<IngestionTab>('demo')
@@ -163,6 +185,7 @@ export function OnboardingWizard({
       }
 
       selectVenue(venueIdToUse)
+      await refreshData(venueIdToUse)
       await saveProgress(2, false)
       setStep(2)
     } catch (err) {
@@ -187,6 +210,7 @@ export function OnboardingWizard({
         setFinalDataSummary(
           `Загружено ${res.transactionsCount} операций, найдено ${res.deduplicationPairsCount} дубликатов`
         )
+        await refreshData(activeVenueId)
       }
     } finally {
       setIsSeedingDemo(false)
@@ -220,12 +244,14 @@ export function OnboardingWizard({
 
       await addTransactionsBatch(batch)
       await runDeduplication()
+      await refreshData(activeVenueId)
 
       setFileParsedCount(parsed.rows.length)
       setFinalDataSummary(`Импортировано ${parsed.rows.length} операций из банковской выписки`)
     } catch (err) {
       setFileError(err instanceof Error ? err.message : 'Ошибка при чтении выписки')
     } finally {
+      if (e.target) e.target.value = ''
       setFileParsing(false)
     }
   }
@@ -242,6 +268,7 @@ export function OnboardingWizard({
         isSandbox: true,
       })
       const syncRes = await syncBankAction(activeVenueId)
+      await refreshData(activeVenueId)
       setBankSuccessMsg(
         `Банк подключен: загружено ${syncRes.syncedCount || 15} операций из песочницы`
       )
@@ -266,6 +293,7 @@ export function OnboardingWizard({
       const orgId = test.organizations[0]?.id || 'demo-org-1'
       await saveIikoSettingsAction(activeVenueId, { apiKey: iikoKey, orgId, autoSync: true })
       const syncRes = await syncVenueIikoAction(activeVenueId)
+      await refreshData(activeVenueId)
       setIikoSuccessMsg(`iiko подключен: +${syncRes.syncedSalesCount} смен, +${syncRes.syncedInventoryCount} блюд`)
       setFinalDataSummary('Синхронизировано с iikoCloud API')
     } catch {
@@ -288,6 +316,8 @@ export function OnboardingWizard({
   useEffect(() => {
     if (step === 3 && activeVenueId) {
       let isMounted = true
+      let pollCount = 0
+      const maxPolls = 60 // 3 minutes safety timeout
 
       createTelegramAuthTokenAction(undefined, activeVenueId)
         .then((auth) => {
@@ -297,9 +327,17 @@ export function OnboardingWizard({
       // Polling every 3 seconds for connection confirmation
       pollingRef.current = setInterval(async () => {
         try {
+          pollCount++
           const status = await getTelegramStatusAction()
           if (status.isConnected && isMounted) {
             setTgStatus(status)
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current)
+              pollingRef.current = null
+            }
+          } else if (pollCount >= maxPolls && pollingRef.current) {
+            clearInterval(pollingRef.current)
+            pollingRef.current = null
           }
         } catch {
           // ignore
@@ -322,6 +360,7 @@ export function OnboardingWizard({
   // --- Step 4: Finalize Onboarding ---
   const handleFinishOnboarding = async () => {
     await saveProgress(4, true)
+    await refreshData(activeVenueId)
     if (onComplete) {
       onComplete(activeVenueId)
     } else {

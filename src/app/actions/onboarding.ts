@@ -171,6 +171,11 @@ export async function seedDemoDataAction(
   try {
     const { transactions, initialCash, menuItems } = generateDemoDataset(venueId)
 
+    // Clear previous demo / test data for this venue so repeated seeding doesn't create duplicate cascades
+    await prisma.deduplicationPair.deleteMany({ where: { venueId } })
+    await prisma.transaction.deleteMany({ where: { venueId } })
+    await prisma.menuItem.deleteMany({ where: { venueId } })
+
     // 1. Insert transactions
     await prisma.transaction.createMany({
       data: transactions.map((tx) => ({

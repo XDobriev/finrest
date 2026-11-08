@@ -29,8 +29,10 @@ export function parse1CClientBank(content: string, venueName?: string): BankPars
     warnings: [],
   }
 
-  const lines = content.split(/\r?\n/)
-  if (lines.length === 0 || !lines[0].includes('1CClientBankExchange')) {
+  const cleanContent = content.replace(/^\uFEFF/, '')
+  const lines = cleanContent.split(/\r?\n/)
+  const firstNonEmpty = lines.find((l) => l.trim().length > 0) || ''
+  if (!firstNonEmpty.includes('1CClientBankExchange')) {
     result.errors.push('Файл не соответствует формату 1CClientBankExchange')
     return result
   }

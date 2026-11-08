@@ -103,6 +103,7 @@ interface AppState {
   exportAllData: () => string
   importAllData: (json: string) => boolean
   resetAllData: () => void
+  refreshData: (targetVenueId?: string) => Promise<void>
 
   mobileMenuOpen: boolean
   setMobileMenuOpen: (open: boolean) => void
@@ -533,48 +534,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ]
   )
 
-  const resetAllData = useCallback(async () => {
-    try {
-      const dbVenues = await getVenuesAction()
-      if (dbVenues && dbVenues.length > 0) {
-        setVenues(dbVenues)
-        setSelectedVenueId(dbVenues[0].id)
-        const [dbTxs, dbPairs, dbInventory, dbCash] = await Promise.all([
-          getTransactionsAction(dbVenues[0].id),
-          getDeduplicationPairsAction(dbVenues[0].id),
-          getInventoryItemsAction(dbVenues[0].id),
-          getCashBalancesAction(dbVenues[0].id),
-        ])
-        setTransactions(dbTxs)
-        setDeduplicationPairs(dbPairs)
-        setInventory(dbInventory)
-        setCashBalances({ [dbVenues[0].id]: dbCash })
-      } else {
-        setVenues([])
-        setSelectedVenueId('')
-        setTransactions([])
-        setDeduplicationPairs([])
-        setInventory([])
-        setCashBalances({})
+  const refreshData = useCallback(
+    async (targetVenueId?: string) => {
+      try {
+        const dbVenues = await getVenuesAction()
+        if (dbVenues && dbVenues.length > 0) {
+          setVenues(dbVenues)
+          const activeVenueId =
+            targetVenueId && dbVenues.some((v) => v.id === targetVenueId)
+              ? targetVenueId
+              : selectedVenueId && dbVenues.some((v) => v.id === selectedVenueId)
+              ? selectedVenueId
+              : dbVenues[0].id
+          setSelectedVenueId(activeVenueId)
+          const [dbTxs, dbPairs, dbInventory, dbCash] = await Promise.all([
+            getTransactionsAction(activeVenueId),
+            getDeduplicationPairsAction(activeVenueId),
+            getInventoryItemsAction(activeVenueId),
+            getCashBalancesAction(activeVenueId),
+          ])
+          setTransactions(dbTxs)
+          setDeduplicationPairs(dbPairs)
+          setInventory(dbInventory)
+          setCashBalances((prev) => ({
+            ...prev,
+            [activeVenueId]: dbCash,
+          }))
+        } else {
+          setVenues([])
+          setSelectedVenueId('')
+          setTransactions([])
+          setDeduplicationPairs([])
+          setInventory([])
+          setCashBalances({})
+        }
+      } catch (err) {
+        console.error('Failed to refresh data from PostgreSQL:', err)
       }
-    } catch {
-      setVenues([])
-      setSelectedVenueId('')
-      setTransactions([])
-      setDeduplicationPairs([])
-      setInventory([])
-      setCashBalances({})
-    }
+    },
+    [selectedVenueId, setSelectedVenueId, setCashBalances, setInventory]
+  )
+
+  const resetAllData = useCallback(async () => {
+    await refreshData()
     setFileUploads([])
     setDeduplicationLog([])
     setDateRange(getDefaultDateRange())
   }, [
-    setSelectedVenueId,
+    refreshData,
     setDateRange,
     setFileUploads,
     setDeduplicationLog,
-    setCashBalances,
-    setInventory,
   ])
 
   const value = useMemo(
@@ -608,6 +618,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       exportAllData,
       importAllData,
       resetAllData,
+      refreshData,
       mobileMenuOpen,
       setMobileMenuOpen,
       toggleMobileMenu,
@@ -642,6 +653,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       exportAllData,
       importAllData,
       resetAllData,
+      refreshData,
       mobileMenuOpen,
       toggleMobileMenu,
     ]
