@@ -21,7 +21,12 @@ function ShellInner({ children }: { children: React.ReactNode }) {
       {/* Mobile sidebar */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="w-64 p-0">
-          <Sidebar collapsed={false} onToggle={() => setMobileMenuOpen(false)} />
+          <Sidebar
+            collapsed={false}
+            className="static h-full w-full"
+            onToggle={() => setMobileMenuOpen(false)}
+            onNavigate={() => setMobileMenuOpen(false)}
+          />
         </SheetContent>
       </Sheet>
 

@@ -61,16 +61,19 @@ const navGroups: NavGroup[] = [
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  onNavigate?: () => void
+  className?: string
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, onNavigate, className }: SidebarProps) {
   const pathname = usePathname()
 
   return (
     <aside
       className={cn(
         'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border bg-white transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64'
+        collapsed ? 'w-16' : 'w-64',
+        className
       )}
     >
       {/* Brand Logo */}
@@ -113,6 +116,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 const link = (
                   <Link
                     href={item.href}
+                    onClick={onNavigate}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
