@@ -112,12 +112,15 @@ model InventoryItem {
 }
 
 model CashBalance {
-  id        String   @id @default(cuid())
-  venueId   String
-  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  monthKey  String   // e.g. "2025-01"
-  amount    Float
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  venueId      String
+  venue        Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  monthKey     String   // e.g. "2025-01"
+  amount       Float
+  bankBalance  Float?
+  safeBalance  Float?
+  shiftBalance Float?
+  updatedAt    DateTime @updatedAt
 
   @@unique([venueId, monthKey])
 }

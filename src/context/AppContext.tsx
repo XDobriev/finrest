@@ -89,7 +89,12 @@ interface AppState {
   setDateRange: (range: DateRange) => void
 
   cashBalances: CashBalances
-  setCashBalance: (venueId: string, monthKey: string, amount: number) => void
+  setCashBalance: (
+    venueId: string,
+    monthKey: string,
+    amount: number,
+    breakdown?: { bank?: number; safe?: number; shift?: number }
+  ) => void
 
   inventory: InventoryItem[]
   addInventoryItem: (item: Omit<InventoryItem, 'id' | 'createdAt'>) => void
@@ -405,9 +410,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   )
 
   const setCashBalance = useCallback(
-    async (venueId: string, monthKey: string, amount: number) => {
+    async (
+      venueId: string,
+      monthKey: string,
+      amount: number,
+      breakdown?: { bank?: number; safe?: number; shift?: number }
+    ) => {
       try {
-        await setCashBalanceAction(venueId, monthKey, amount)
+        await setCashBalanceAction(venueId, monthKey, amount, breakdown)
         setCashBalances((prev) => ({
           ...prev,
           [venueId]: {

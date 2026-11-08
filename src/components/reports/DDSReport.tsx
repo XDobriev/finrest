@@ -13,7 +13,10 @@ interface DDSReportProps {
   data: DDSReportData
   venueName: string
   period: string
-  onOpeningBalanceChange?: (amount: number) => void
+  onOpeningBalanceChange?: (
+    amount: number,
+    breakdown?: { bank?: number; safe?: number; shift?: number }
+  ) => void
 }
 
 function TotalLine({ label, amount, bold = false }: { label: string; amount: number; bold?: boolean }) {
@@ -90,7 +93,7 @@ export function DDSReport({ data, venueName, period, onOpeningBalanceChange }: D
     const total = b + s + sh
     setInputValue(String(total))
     if (onOpeningBalanceChange) {
-      onOpeningBalanceChange(total)
+      onOpeningBalanceChange(total, { bank: b, safe: s, shift: sh })
     }
     setPopoverOpen(false)
   }

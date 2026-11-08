@@ -20,6 +20,7 @@ import {
 } from '../../src/app/actions/inventory'
 import {
   getCashBalancesAction,
+  getCashBalanceDetailsAction,
   setCashBalanceAction,
 } from '../../src/app/actions/cash'
 
@@ -202,8 +203,19 @@ test('Server Actions: inventory item lifecycle', async () => {
 })
 
 test('Server Actions: cash balances upsert and fetch', async () => {
-  await setCashBalanceAction('venue-1', '2026-11', 450000)
+  await setCashBalanceAction('venue-1', '2026-11', 450000, {
+    bank: 315000,
+    safe: 90000,
+    shift: 45000,
+  })
 
   const balances = await getCashBalancesAction('venue-1')
   assert.equal(balances['2026-11'], 450000)
+
+  const details = await getCashBalanceDetailsAction('venue-1', '2026-11')
+  assert.ok(details)
+  assert.equal(details?.amount, 450000)
+  assert.equal(details?.bankBalance, 315000)
+  assert.equal(details?.safeBalance, 90000)
+  assert.equal(details?.shiftBalance, 45000)
 })

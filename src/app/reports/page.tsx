@@ -123,7 +123,9 @@ export default function ReportsPage() {
                       data={ddsData}
                       venueName={venueName}
                       period={period}
-                      onOpeningBalanceChange={(amount) => setCashBalance(selectedVenueId, monthKey, amount)}
+                      onOpeningBalanceChange={(amount, breakdown) =>
+                        setCashBalance(selectedVenueId, monthKey, amount, breakdown)
+                      }
                     />
                     <div className="flex justify-end">
                       <Button
