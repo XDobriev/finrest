@@ -23,6 +23,9 @@ import {
   getCashBalanceDetailsAction,
   setCashBalanceAction,
 } from '../../src/app/actions/cash'
+import { createUser } from '../../src/lib/db/users'
+import { createVenue, deleteVenue } from '../../src/lib/db/venues'
+import { createSessionToken } from '../../src/lib/auth/jwt'
 
 test('Server Actions: getVenuesAction returns formatted venues', async () => {
   const venues = await getVenuesAction()
@@ -39,6 +42,60 @@ test('Server Actions: venue creation and deletion lifecycle', async () => {
 
   const res = await deleteVenueAction(created.id)
   assert.equal(res.success, true)
+})
+
+test('Server Actions: multi-tenancy prevents deleting or accessing a venue owned by another user', async () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nextHeaders = require('next/headers')
+  const originalCookies = nextHeaders.cookies
+
+  // Create User A and User B
+  const userA = await createUser({
+    email: `tenant_a_${Date.now()}@finrest.local`,
+    passwordHash: 'hash123',
+    name: 'Владелец А',
+    role: 'OWNER',
+  })
+  const userB = await createUser({
+    email: `tenant_b_${Date.now()}@finrest.local`,
+    passwordHash: 'hash123',
+    name: 'Владелец Б',
+    role: 'OWNER',
+  })
+
+  // Create venue belonging strictly to User B
+  const venueB = await createVenue({
+    name: 'Ресторан Владельца Б',
+    ownerId: userB.id,
+  })
+
+  // Sign in as User A
+  const tokenA = await createSessionToken({
+    userId: userA.id,
+    email: userA.email,
+    role: 'OWNER',
+    name: userA.name,
+  })
+
+  try {
+    nextHeaders.cookies = async () => ({
+      get: (name: string) => (name === 'finrest_session' ? { value: tokenA } : undefined),
+      set: () => {},
+      delete: () => {},
+    })
+
+    // User A attempts to delete User B's venue -> must reject
+    await assert.rejects(
+      async () => {
+        await deleteVenueAction(venueB.id)
+      },
+      /Нет прав на управление этим заведением|Forbidden|Unauthorized/
+    )
+  } finally {
+    nextHeaders.cookies = originalCookies
+    // Clean up venueB directly in DB
+    await deleteVenue(venueB.id)
+  }
 })
 
 test('Server Actions: transactions and real deduplication run', async () => {

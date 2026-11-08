@@ -11,8 +11,10 @@ export interface VenueWithSettings extends Omit<PrismaVenue, 'dateToleranceDays'
   deduplicationSettings: VenueSettings
 }
 
-export async function getVenues(): Promise<VenueWithSettings[]> {
+export async function getVenues(ownerId?: string): Promise<VenueWithSettings[]> {
+  const where = ownerId ? { OR: [{ ownerId }, { ownerId: null }] } : {}
   const venues = await prisma.venue.findMany({
+    where,
     orderBy: { createdAt: 'asc' },
   })
 
@@ -31,6 +33,7 @@ export async function createVenue(data: {
   id?: string
   name: string
   address?: string
+  ownerId?: string
   dateToleranceDays?: number
   amountTolerancePercent?: number
   fuzzyMatchThreshold?: number
@@ -40,6 +43,7 @@ export async function createVenue(data: {
       ...(data.id ? { id: data.id } : {}),
       name: data.name,
       address: data.address,
+      ownerId: data.ownerId,
       dateToleranceDays: data.dateToleranceDays ?? 1,
       amountTolerancePercent: data.amountTolerancePercent ?? 5.0,
       fuzzyMatchThreshold: data.fuzzyMatchThreshold ?? 0.7,
