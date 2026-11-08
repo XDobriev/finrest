@@ -4,6 +4,7 @@ import {
   getTransactions,
   getTransactionById,
   createTransaction,
+  createTransactionsBatch,
   updateTransaction,
   deleteTransaction,
   type GetTransactionsFilter,
@@ -77,4 +78,23 @@ export async function updateTransactionStatusAction(
 export async function deleteTransactionAction(id: string): Promise<{ success: boolean }> {
   await deleteTransaction(id)
   return { success: true }
+}
+
+export async function createTransactionsBatchAction(
+  items: Array<{
+    venueId: string
+    source: DataSource
+    date: string
+    amount: number
+    type: 'income' | 'expense'
+    category: ExpenseCategory
+    counterparty: string
+    description: string
+    status?: TransactionStatus
+    duplicateOfId?: string
+    originalFileId?: string
+  }>
+): Promise<{ success: boolean; count: number }> {
+  const result = await createTransactionsBatch(items)
+  return { success: true, count: result.count }
 }

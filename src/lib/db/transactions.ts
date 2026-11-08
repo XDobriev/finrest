@@ -85,6 +85,39 @@ export async function createTransaction(data: {
   })
 }
 
+export async function createTransactionsBatch(
+  data: Array<{
+    venueId: string
+    source: string
+    date: Date | string
+    amount: number
+    type: string
+    category: string
+    counterparty: string
+    description: string
+    status?: string
+    duplicateOfId?: string
+    originalFileId?: string
+  }>
+): Promise<{ count: number }> {
+  if (data.length === 0) return { count: 0 }
+  return prisma.transaction.createMany({
+    data: data.map((d) => ({
+      venueId: d.venueId,
+      source: d.source,
+      date: typeof d.date === 'string' ? new Date(d.date) : d.date,
+      amount: d.amount,
+      type: d.type,
+      category: d.category,
+      counterparty: d.counterparty,
+      description: d.description,
+      status: d.status ?? 'unique',
+      duplicateOfId: d.duplicateOfId,
+      originalFileId: d.originalFileId,
+    })),
+  })
+}
+
 export async function updateTransaction(
   id: string,
   data: Partial<{

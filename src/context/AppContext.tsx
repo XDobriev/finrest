@@ -31,6 +31,7 @@ import {
 import {
   getTransactionsAction,
   createTransactionAction,
+  createTransactionsBatchAction,
   updateTransactionStatusAction,
 } from '@/app/actions/transactions'
 import {
@@ -65,6 +66,7 @@ interface AppState {
   deleteVenue: (venueId: string) => Promise<void>
 
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt' | 'status'>) => Promise<void>
+  addTransactionsBatch: (items: Array<Omit<Transaction, 'id' | 'createdAt' | 'status'>>) => Promise<void>
   updateTransactionStatus: (
     id: string,
     status: Transaction['status'],
@@ -295,6 +297,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     },
     []
+  )
+
+  const addTransactionsBatch = useCallback(
+    async (items: Array<Omit<Transaction, 'id' | 'createdAt' | 'status'>>) => {
+      if (items.length === 0) return
+      try {
+        await createTransactionsBatchAction(
+          items.map((it) => ({
+            ...it,
+            status: 'unique' as const,
+          }))
+        )
+        const refreshed = await getTransactionsAction(selectedVenueId)
+        setTransactions(refreshed)
+      } catch (err) {
+        console.error('Failed to batch create transactions in PostgreSQL:', err)
+      }
+    },
+    [selectedVenueId]
   )
 
   const updateTransactionStatus = useCallback(
@@ -530,6 +551,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateVenue,
       deleteVenue,
       addTransaction,
+      addTransactionsBatch,
       updateTransactionStatus,
       resolveDeduplicationPair,
       runDeduplication,
@@ -563,6 +585,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateVenue,
       deleteVenue,
       addTransaction,
+      addTransactionsBatch,
       updateTransactionStatus,
       resolveDeduplicationPair,
       runDeduplication,
