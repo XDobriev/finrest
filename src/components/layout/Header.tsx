@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/context/AppContext'
-import { Building2, Menu, Calendar, LogOut, User as UserIcon } from 'lucide-react'
+import { Building2, Menu, Calendar, LogOut, User as UserIcon, Check, ChevronDown, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -72,6 +72,7 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
   const currentVenue = venues.find((v) => v.id === selectedVenueId)
 
   const [user, setUser] = useState<SessionPayload | null>(null)
+  const [venueDropdownOpen, setVenueDropdownOpen] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -117,40 +118,71 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Mobile Venue Selector */}
-        <div className="sm:hidden">
-          <Popover>
+        {/* Unified Responsive Venue Selector */}
+        {venues.length > 0 ? (
+          <Popover open={venueDropdownOpen} onOpenChange={setVenueDropdownOpen}>
             <PopoverTrigger className="inline-flex">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-xs gap-1 max-w-[120px] truncate"
-                aria-label="Выбрать ресторан"
+                className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm font-medium gap-1.5 max-w-[130px] sm:max-w-[210px] md:max-w-[260px] border-slate-200 hover:bg-slate-50 transition-colors"
+                aria-label="Выбрать заведение"
               >
                 <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                <span className="truncate">{currentVenue?.name || 'Ресторан'}</span>
+                <span className="truncate">{currentVenue?.name || 'Выберите заведение'}</span>
+                <ChevronDown className="h-3 w-3 shrink-0 text-slate-400 opacity-70 ml-0.5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-56 p-1.5" align="end">
+            <PopoverContent className="w-64 p-1.5 shadow-md border-slate-200" align="end">
               <div className="space-y-1">
+                <div className="px-2 py-1 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                  Заведения
+                </div>
                 {venues.map((venue) => (
                   <button
                     key={venue.id}
-                    onClick={() => selectVenue(venue.id)}
-                    className={`w-full text-left px-2.5 py-1.5 text-xs rounded-md transition-colors flex items-center justify-between ${
+                    onClick={() => {
+                      selectVenue(venue.id)
+                      setVenueDropdownOpen(false)
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 text-xs sm:text-sm rounded-md transition-colors flex items-center justify-between ${
                       selectedVenueId === venue.id
                         ? 'bg-emerald-50 text-emerald-900 font-semibold'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <span>{venue.name}</span>
-                    {selectedVenueId === venue.id && <span className="text-emerald-600">✓</span>}
+                    <span className="truncate pr-2">{venue.name}</span>
+                    {selectedVenueId === venue.id && (
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    )}
                   </button>
                 ))}
+                <div className="my-1 border-t border-slate-100" />
+                <Link
+                  href="/venues"
+                  onClick={() => setVenueDropdownOpen(false)}
+                  className="flex items-center gap-1.5 w-full px-2.5 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50 rounded-md font-medium transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5 shrink-0" />
+                  <span>Управление заведениями</span>
+                </Link>
               </div>
             </PopoverContent>
           </Popover>
-        </div>
+        ) : (
+          <Link href="/venues">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 sm:h-9 px-2 sm:px-3 text-xs font-medium gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+              aria-label="Добавить заведение"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Добавить заведение</span>
+              <span className="sm:hidden">Заведение</span>
+            </Button>
+          </Link>
+        )}
 
         {/* Date range picker */}
         <Popover>
@@ -209,24 +241,6 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
           </PopoverContent>
         </Popover>
 
-        {/* Desktop Venue selector */}
-        <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-border bg-slate-50 p-1">
-          {venues.map((venue) => (
-            <button
-              key={venue.id}
-              onClick={() => selectVenue(venue.id)}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                selectedVenueId === venue.id
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Building2 className="h-3.5 w-3.5 text-slate-500" />
-              <span className="hidden md:inline">{venue.name}</span>
-              <span className="md:hidden">{venue.name.split(' ')[0]}</span>
-            </button>
-          ))}
-        </div>
 
         {pendingPairs > 0 && (
           <Badge className="hidden sm:flex gap-1.5 bg-amber-100 text-amber-950 border border-amber-300 font-medium">
