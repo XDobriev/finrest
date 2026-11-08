@@ -37,6 +37,15 @@ import {
   type TelegramConnectionStatus,
   type TelegramAuthTokenResponse,
 } from '@/app/actions/telegram'
+import {
+  getBankConnectionsAction,
+  connectBankAction,
+  disconnectBankAction,
+  syncBankAction,
+  testBankAction,
+  type BankConnectionDto,
+} from '@/app/actions/bank'
+import { Landmark } from 'lucide-react'
 import type { IikoOrganization } from '@/lib/iiko/types'
 
 export default function SettingsPage() {
@@ -76,9 +85,42 @@ export default function SettingsPage() {
   const [tgAuthData, setTgAuthData] = useState<TelegramAuthTokenResponse | null>(null)
   const [isGeneratingTg, setIsGeneratingTg] = useState(false)
 
-  React.useEffect(() => {
-    getTelegramStatusAction().then(setTgStatus).catch(() => {})
+  // Bank Integration states
+  const [bankConnections, setBankConnections] = useState<BankConnectionDto[]>([])
+  const [selectedBankType, setSelectedBankType] = useState<'TBANK' | 'TOCHKA'>('TBANK')
+  const [bankToken, setBankToken] = useState('tbank_sandbox_token_demo')
+  const [bankAccountNumber, setBankAccountNumber] = useState('40702810900000012345')
+  const [isBankSandbox, setIsBankSandbox] = useState(true)
+  const [isBankConnecting, setIsBankConnecting] = useState(false)
+  const [isBankTesting, setIsBankTesting] = useState(false)
+  const [isBankSyncingId, setIsBankSyncingId] = useState<string | null>(null)
+  const [bankMessage, setBankMessage] = useState<string | null>(null)
+
+  const loadBankConnections = React.useCallback(async (venueId: string) => {
+    try {
+      const conns = await getBankConnectionsAction(venueId)
+      setBankConnections(conns)
+    } catch {
+      // ignore
+    }
   }, [])
+
+  React.useEffect(() => {
+    let isMounted = true
+    getTelegramStatusAction().then((st) => {
+      if (isMounted) setTgStatus(st)
+    }).catch(() => {})
+
+    if (selectedVenueId) {
+      getBankConnectionsAction(selectedVenueId).then((conns) => {
+        if (isMounted) setBankConnections(conns)
+      }).catch(() => {})
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [selectedVenueId])
 
   const handleConnectTelegram = async () => {
     setIsGeneratingTg(true)
@@ -94,6 +136,63 @@ export default function SettingsPage() {
     await disconnectTelegramAction()
     setTgStatus({ isConnected: false })
     setTgAuthData(null)
+  }
+
+  const handleTestBank = async () => {
+    setIsBankTesting(true)
+    setBankMessage(null)
+    try {
+      const res = await testBankAction(selectedBankType, bankToken, isBankSandbox)
+      setBankMessage(res.message)
+    } finally {
+      setIsBankTesting(false)
+    }
+  }
+
+  const handleSaveBankConnection = async () => {
+    if (!selectedVenueId) return
+    setIsBankConnecting(true)
+    setBankMessage(null)
+    try {
+      await connectBankAction(selectedVenueId, {
+        bankType: selectedBankType,
+        token: bankToken,
+        accountNumber: bankAccountNumber,
+        isSandbox: isBankSandbox,
+      })
+      await loadBankConnections(selectedVenueId)
+      setBankMessage('Банк успешно подключен и готов к синхронизации')
+    } catch (err) {
+      setBankMessage(err instanceof Error ? err.message : 'Ошибка подключения банка')
+    } finally {
+      setIsBankConnecting(false)
+    }
+  }
+
+  const handleSyncBank = async (connectionId: string) => {
+    if (!selectedVenueId) return
+    setIsBankSyncingId(connectionId)
+    setBankMessage(null)
+    try {
+      const res = await syncBankAction(connectionId)
+      if (res.success) {
+        setBankMessage(`Синхронизировано ${res.syncedCount} банковских операций, найдено дубликатов: ${res.newDuplicatesCount}`)
+      } else {
+        setBankMessage(res.error || 'Ошибка синхронизации')
+      }
+      await loadBankConnections(selectedVenueId)
+    } catch (err) {
+      setBankMessage(err instanceof Error ? err.message : 'Ошибка выполнения синхронизации')
+    } finally {
+      setIsBankSyncingId(null)
+    }
+  }
+
+  const handleDisconnectBank = async (connectionId: string) => {
+    if (!selectedVenueId) return
+    await disconnectBankAction(connectionId)
+    await loadBankConnections(selectedVenueId)
+    setBankMessage('Банк отключен')
   }
 
   if (venue && venue.id !== prevVenueId) {
@@ -388,6 +487,217 @@ export default function SettingsPage() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Bank Integrations (Phase 7: T-Bank & Tochka Open API) */}
+        <Card className="rounded-lg shadow-sm border border-slate-200">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded bg-emerald-100 text-emerald-800">
+                  <Landmark className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-semibold text-slate-900">
+                    Банковские интеграции (Open API)
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Автоматический забор утренней выписки в 06:00 и матчинг с iiko без ручного экспорта
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-xs font-normal border-emerald-300 bg-emerald-50 text-emerald-800">
+                Фаза 7
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Connected Banks List */}
+            {bankConnections.length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  Подключенные счета заведения
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {bankConnections.map((conn) => {
+                    const isConnected = conn.status === 'connected'
+                    const isSyncing = isBankSyncingId === conn.id
+                    return (
+                      <div
+                        key={conn.id}
+                        className="p-3 rounded-lg border border-slate-200 bg-slate-50/60 flex flex-col justify-between gap-3"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-sm text-slate-900">
+                                {conn.bankType === 'TBANK' ? 'Т-Банк (Тинькофф)' : 'Банк Точка'}
+                              </span>
+                              {conn.isSandbox && (
+                                <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 border-amber-200">
+                                  Sandbox
+                                </Badge>
+                              )}
+                              <Badge
+                                variant={isConnected ? 'default' : 'destructive'}
+                                className={`text-[10px] ${
+                                  isConnected ? 'bg-emerald-600' : 'bg-red-600'
+                                }`}
+                              >
+                                {isConnected ? 'Активен' : 'Отключен'}
+                              </Badge>
+                            </div>
+                            <p className="text-xs font-mono text-slate-600 mt-1">
+                              Счет: {conn.accountNumber || 'Основной расчетный счет'}
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              {conn.lastSyncAt
+                                ? `Посл. синхр: ${new Date(conn.lastSyncAt).toLocaleString('ru-RU')}`
+                                : 'Ожидает первой синхронизации'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSyncBank(conn.id)}
+                            disabled={isSyncing || !isConnected}
+                            className="text-xs h-8 gap-1.5"
+                          >
+                            {isSyncing ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            )}
+                            Синхронизировать
+                          </Button>
+                          {isConnected ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDisconnectBank(conn.id)}
+                              className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 h-8 ml-auto"
+                            >
+                              Отключить
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleSaveBankConnection()}
+                              className="text-xs text-emerald-600 hover:text-emerald-700 h-8 ml-auto"
+                            >
+                              Подключить заново
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Form to Connect New Bank or Update */}
+            <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
+                  Подключение интернет-банка
+                </Label>
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    id="bank-sandbox-toggle"
+                    checked={isBankSandbox}
+                    onChange={(e) => setIsBankSandbox(e.target.checked)}
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="bank-sandbox-toggle" className="cursor-pointer">
+                    Песочница / Mock-режим
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-700">Банк</Label>
+                  <Select
+                    value={selectedBankType}
+                    onValueChange={(val) => setSelectedBankType(val as 'TBANK' | 'TOCHKA')}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Выберите банк" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TBANK">Т-Банк (Тинькофф Бизнес)</SelectItem>
+                      <SelectItem value="TOCHKA">Банк Точка (Open Banking)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-700">Номер расчетного счета</Label>
+                  <Input
+                    value={bankAccountNumber}
+                    onChange={(e) => setBankAccountNumber(e.target.value)}
+                    placeholder="40702810..."
+                    className="h-9 text-xs font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-700">API токен доступа</Label>
+                  <Input
+                    type="password"
+                    value={bankToken}
+                    onChange={(e) => setBankToken(e.target.value)}
+                    placeholder="Токен из личного кабинета банка"
+                    className="h-9 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              {bankMessage && (
+                <div className="p-2.5 rounded bg-white border border-slate-200 text-xs text-slate-800 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>{bankMessage}</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleTestBank}
+                  disabled={isBankTesting}
+                  className="text-xs h-9 gap-1.5"
+                >
+                  {isBankTesting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  Проверить токен
+                </Button>
+
+                <Button
+                  size="sm"
+                  onClick={handleSaveBankConnection}
+                  disabled={isBankConnecting}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-9 gap-1.5"
+                >
+                  {isBankConnecting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
+                  Сохранить и подключить
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

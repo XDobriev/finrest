@@ -14,9 +14,13 @@ model User {
   role         String   @default("OWNER")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  plan               String              @default("START") // START | BUSINESS | CHAIN
+  subscriptionStatus String              @default("active") // active | trial | past_due | canceled
+  subscriptionExpiresAt DateTime?
   venues             Venue[]
   telegramAccounts   TelegramAccount[]
   telegramAuthTokens TelegramAuthToken[]
+  payments           PaymentOrder[]
 }
 
 model Venue {
@@ -42,6 +46,8 @@ model Venue {
   balanceSnapshots       BalanceSnapshot[]
   telegramAccounts       TelegramAccount[]
   receiptScans           ReceiptScan[]
+  bankConnections        BankConnection[]
+  menuItems              MenuItem[]
 }
 
 model Transaction {
@@ -222,4 +228,66 @@ model TelegramAuthToken {
 
   @@index([token])
   @@index([pin])
+}
+
+model BankConnection {
+  id               String    @id @default(cuid())
+  venueId          String
+  venue            Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  bankType         String    // "TBANK" | "TOCHKA"
+  accountNumber    String?
+  token            String
+  refreshToken     String?
+  clientId         String?
+  clientSecret     String?
+  isSandbox        Boolean   @default(true)
+  status           String    @default("connected") // "connected" | "error" | "disconnected"
+  lastSyncAt       DateTime?
+  lastErrorMessage String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([venueId])
+  @@index([status])
+}
+
+model MenuItem {
+  id              String   @id @default(cuid())
+  venueId         String
+  venue           Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  period          String   @default("2026-11") // YYYY-MM
+  name            String
+  category        String   // "kitchen" | "bar" | "dessert" | "other"
+  sellingPrice    Float
+  standardCost    Float    // нормативная себестоимость (техкарта)
+  actualCost      Float    // фактическая себестоимость
+  salesVolume     Float    // количество проданных порций
+  matrixCategory  String?  // "star" | "plowhorse" | "puzzle" | "dog"
+  abcRevenue      String?  // "A" | "B" | "C"
+  xyzStability    String?  // "X" | "Y" | "Z"
+  foodCostPercent Float?
+  margin          Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([venueId, period])
+  @@index([venueId, category])
+}
+
+model PaymentOrder {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan              String    // "START" | "BUSINESS" | "CHAIN"
+  amount            Float
+  currency          String    @default("RUB")
+  paymentGateway    String    // "yookassa" | "cloudpayments"
+  externalPaymentId String?   @unique
+  status            String    @default("pending") // "pending" | "succeeded" | "canceled"
+  confirmationUrl   String?
+  createdAt         DateTime  @default(now())
+  paidAt            DateTime?
+
+  @@index([userId])
+  @@index([status])
 }
