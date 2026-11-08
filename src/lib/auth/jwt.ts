@@ -1,7 +1,15 @@
 import { SignJWT, jwtVerify } from 'jose'
 
-const JWT_SECRET_STRING = process.env.JWT_SECRET || 'finrest-production-secret-key-152fz-secured-minimum-32-chars'
-const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING)
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET
+  if (process.env.NODE_ENV === 'production') {
+    if (!secret || secret.trim().length < 32) {
+      throw new Error('FATAL: JWT_SECRET must be set and at least 32 characters in production')
+    }
+    return new TextEncoder().encode(secret)
+  }
+  return new TextEncoder().encode(secret || 'finrest-development-insecure-secret-key-32chars!!')
+}
 
 export interface SessionPayload {
   userId: string
@@ -14,16 +22,18 @@ export const SESSION_COOKIE_NAME = 'finrest_session'
 export const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7 // 7 days
 
 export async function createSessionToken(payload: SessionPayload): Promise<string> {
+  const secret = getJwtSecret()
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(JWT_SECRET)
+    .sign(secret)
 }
 
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET, {
+    const secret = getJwtSecret()
+    const { payload } = await jwtVerify(token, secret, {
       algorithms: ['HS256'],
     })
     return {
