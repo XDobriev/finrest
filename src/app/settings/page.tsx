@@ -21,12 +21,22 @@ import {
   Cloud,
   RefreshCw,
   Loader2,
+  Smartphone,
+  ExternalLink,
+  CheckCircle2,
 } from 'lucide-react'
 import {
   testIikoConnectionAction,
   saveIikoSettingsAction,
   syncVenueIikoAction,
 } from '@/app/actions/iiko'
+import {
+  createTelegramAuthTokenAction,
+  getTelegramStatusAction,
+  disconnectTelegramAction,
+  type TelegramConnectionStatus,
+  type TelegramAuthTokenResponse,
+} from '@/app/actions/telegram'
 import type { IikoOrganization } from '@/lib/iiko/types'
 
 export default function SettingsPage() {
@@ -60,6 +70,31 @@ export default function SettingsPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [iikoMessage, setIikoMessage] = useState<string | null>(null)
   const [iikoSaved, setIikoSaved] = useState(false)
+
+  // Telegram Integration states
+  const [tgStatus, setTgStatus] = useState<TelegramConnectionStatus | null>(null)
+  const [tgAuthData, setTgAuthData] = useState<TelegramAuthTokenResponse | null>(null)
+  const [isGeneratingTg, setIsGeneratingTg] = useState(false)
+
+  React.useEffect(() => {
+    getTelegramStatusAction().then(setTgStatus).catch(() => {})
+  }, [])
+
+  const handleConnectTelegram = async () => {
+    setIsGeneratingTg(true)
+    try {
+      const data = await createTelegramAuthTokenAction(undefined, selectedVenueId)
+      setTgAuthData(data)
+    } finally {
+      setIsGeneratingTg(false)
+    }
+  }
+
+  const handleDisconnectTelegram = async () => {
+    await disconnectTelegramAction()
+    setTgStatus({ isConnected: false })
+    setTgAuthData(null)
+  }
 
   if (venue && venue.id !== prevVenueId) {
     setPrevVenueId(venue.id)
@@ -258,6 +293,101 @@ export default function SettingsPage() {
                 Синхронизировать сейчас
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Telegram Bot Integration */}
+        <Card className="rounded-lg shadow-sm border-blue-200/80 bg-gradient-to-b from-blue-50/20 to-white">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-base font-semibold text-slate-900">
+                  Telegram-бот и OCR чеков
+                </CardTitle>
+              </div>
+              {tgStatus?.isConnected ? (
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-xs gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Подключен (@{tgStatus.username || tgStatus.firstName || 'User'})
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs text-slate-500 border-slate-300">
+                  Не подключен
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              Моментальный ввод расходов шеф-поваром, двухступенчатый OCR чеков (54-ФЗ и рынок) и вечерний Flash-отчет в 23:30.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {tgStatus?.isConnected ? (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50/60 border border-emerald-200 flex-wrap gap-3">
+                <div className="text-xs space-y-1">
+                  <p className="font-semibold text-emerald-950">
+                    Бот активен для заведения: {tgStatus.activeVenueName || venue?.name}
+                  </p>
+                  <p className="text-emerald-800">
+                    Telegram ID: <span className="font-mono">{tgStatus.telegramId}</span>
+                  </p>
+                </div>
+                <Button
+                  onClick={handleDisconnectTelegram}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 h-8"
+                >
+                  Отключить аккаунт
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {!tgAuthData ? (
+                  <div>
+                    <Button
+                      onClick={handleConnectTelegram}
+                      disabled={isGeneratingTg}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-500 text-white text-xs gap-1.5 h-9"
+                    >
+                      {isGeneratingTg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
+                      Подключить Telegram
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-lg bg-blue-50/70 border border-blue-200 space-y-3">
+                    <p className="text-xs font-semibold text-blue-950">
+                      Для подключения Telegram выберите один из вариантов:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="p-3 bg-white rounded-md border border-blue-100 space-y-2">
+                        <p className="font-medium text-slate-900">Вариант 1: Прямая ссылка</p>
+                        <a
+                          href={tgAuthData.deepLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Перейти в @FinRestBot
+                        </a>
+                      </div>
+
+                      <div className="p-3 bg-white rounded-md border border-blue-100 space-y-1.5">
+                        <p className="font-medium text-slate-900">Вариант 2: 6-значный PIN-код</p>
+                        <p className="text-lg font-mono font-bold tracking-widest text-blue-700">
+                          {tgAuthData.pin.slice(0, 3)}-{tgAuthData.pin.slice(3)}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Отправьте этот код боту в чат. Код действует 10 минут.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
