@@ -12,6 +12,7 @@ test('Docker Configuration: validates production Dockerfile multi-stage setup', 
   assert.ok(content.includes('FROM node:22-alpine AS builder'), 'Must have builder stage')
   assert.ok(content.includes('FROM node:22-alpine AS runner'), 'Must have runner stage')
   assert.ok(content.includes('USER nextjs'), 'Must run as non-root user')
+  assert.ok(content.includes('node_modules/prisma'), 'Must include prisma CLI in runner container')
   assert.ok(content.includes('CMD ["node", "server.js"]'), 'Must launch standalone Next.js server')
 })
 
@@ -52,6 +53,7 @@ test('Deployment Scripts: validates backup and deployment automation', () => {
 
   const backupContent = fs.readFileSync(backupScript, 'utf-8')
   assert.ok(backupContent.includes('pg_dump'), 'Backup script must use pg_dump')
+  assert.ok(backupContent.includes('docker exec -i'), 'Backup script must use non-tty flag for cron')
   assert.ok(backupContent.includes('gzip'), 'Backup script must compress dumps')
 
   const deployContent = fs.readFileSync(deployScript, 'utf-8')

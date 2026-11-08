@@ -17,7 +17,7 @@ mkdir -p "${BACKUP_DIR}"
 
 echo "📦 [$(date)] Starting backup of database '${DB_NAME}'..."
 
-docker exec -t "${CONTAINER_NAME}" pg_dump -U "${DB_USER}" -d "${DB_NAME}" | gzip > "${BACKUP_FILE}"
+docker exec -i "${CONTAINER_NAME}" pg_dump -U "${DB_USER}" -d "${DB_NAME}" | gzip > "${BACKUP_FILE}"
 
 echo "✅ Backup successfully created at: ${BACKUP_FILE}"
 echo "📊 Backup size: $(du -h "${BACKUP_FILE}" | cut -f1)"
