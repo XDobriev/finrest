@@ -25,7 +25,8 @@ import {
   LineChart,
   Line,
 } from 'recharts'
-import { BarChart3, TrendingUp, PieChartIcon, UploadCloud, FileQuestion, UtensilsCrossed, ArrowRight } from 'lucide-react'
+import { BarChart3, TrendingUp, PieChartIcon, UploadCloud, UtensilsCrossed, ArrowRight, Sparkles } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
 
 export default function AnalyticsPage() {
   const { transactions, selectedVenueId, dateRange } = useApp()
@@ -153,26 +154,42 @@ export default function AnalyticsPage() {
             </Card>
           </div>
         ) : !hasData ? (
-          <Card className="rounded-xl shadow-sm border-dashed border-2">
-            <CardContent className="p-12 text-center">
-              <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                <FileQuestion className="h-6 w-6 text-slate-500" />
-              </div>
-              <h3 className="text-base font-semibold text-slate-900 mb-1">
-                Нет данных для аналитики за выбранный период
-              </h3>
-              <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
-                Загрузите выписку из банка или данные продаж из iiko, чтобы увидеть динамику расходов и разбивку по категориям.
-              </p>
-              <Link
-                href="/upload"
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 text-sm shadow-sm transition-colors"
-              >
-                <UploadCloud className="h-4 w-4" />
-                Загрузить выписку
-              </Link>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={<BarChart3 className="h-7 w-7 text-emerald-600" />}
+            title="Нет данных для построения аналитических графиков"
+            description="Графики динамики выручки, структура расходов по категориям и матрица меню Касаваны-Смита строятся на основе операций заведения."
+            tip="Регулярный анализ динамики расходов по источникам (iiko vs банк) позволяет выявить перерасход Food Cost на ранних этапах месяца."
+            checklist={[
+              'Загрузите банковскую выписку за выбранный период',
+              'Синхронизируйте смены из iikoCloud или проведите дедупликацию',
+              'Перейдите в «Инженерию меню» для анализа звездности блюд и фудкоста',
+            ]}
+            actions={
+              <>
+                <Link
+                  href="/upload"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 text-sm shadow-xs transition-colors"
+                >
+                  <UploadCloud className="h-4 w-4" />
+                  Загрузить выписку
+                </Link>
+                <Link
+                  href="/analytics/menu"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 text-sm transition-colors"
+                >
+                  <UtensilsCrossed className="h-4 w-4 text-emerald-600" />
+                  Матрица меню
+                </Link>
+                <Link
+                  href="/onboarding"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 text-sm transition-colors"
+                >
+                  <Sparkles className="h-4 w-4 text-emerald-600" />
+                  Мастер онбординга
+                </Link>
+              </>
+            }
+          />
         ) : (
           <>
             {/* Source comparison (stacked bar) */}

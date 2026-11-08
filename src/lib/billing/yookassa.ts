@@ -38,10 +38,57 @@ export class YooKassaClient {
     }
 
     const amount = planConfig.price
-    const paymentId = `yk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-    const confirmationUrl = input.returnUrl.includes('?')
+    let paymentId = `yk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+    let confirmationUrl = input.returnUrl.includes('?')
       ? `${input.returnUrl}&payment_id=${paymentId}`
       : `${input.returnUrl}?payment_id=${paymentId}`
+
+    if (!this.isSandbox && this.shopId && this.secretKey) {
+      try {
+        const auth = Buffer.from(`${this.shopId}:${this.secretKey}`).toString('base64')
+        const idempotenceKey = `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+        const res = await fetch('https://api.yookassa.ru/v3/payments', {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/json',
+            'Idempotence-Key': idempotenceKey,
+          },
+          body: JSON.stringify({
+            amount: {
+              value: `${amount}.00`,
+              currency: 'RUB',
+            },
+            capture: true,
+            confirmation: {
+              type: 'redirect',
+              return_url: input.returnUrl,
+            },
+            description: `Подписка FinRest на тариф «${planConfig.name}»`,
+            metadata: {
+              userId: input.userId,
+              plan: input.plan,
+            },
+          }),
+        })
+
+        if (!res.ok) {
+          throw new Error(`YooKassa API HTTP ${res.status}: ${res.statusText}`)
+        }
+
+        const data = await res.json()
+        if (data.id) {
+          paymentId = data.id
+        }
+        if (data.confirmation?.confirmation_url) {
+          confirmationUrl = data.confirmation.confirmation_url
+        }
+      } catch (err) {
+        throw new Error(
+          `Ошибка создания платежа в ЮKassa: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+    }
 
     // Create payment order in database
     await prisma.paymentOrder.create({
@@ -102,15 +149,23 @@ export class YooKassaClient {
       },
     })
 
-    // 2. Extend or activate user subscription (+30 days)
-    const thirtyDaysFromNow = new Date(Date.now() + 30 * 86400000)
+    // 2. Extend or activate user subscription (+30 days from existing expiry or now)
+    const now = new Date()
+    const currentUser = await prisma.user.findUnique({
+      where: { id: order.userId },
+    })
+    const baseDate =
+      currentUser?.subscriptionExpiresAt && currentUser.subscriptionExpiresAt > now
+        ? currentUser.subscriptionExpiresAt
+        : now
+    const newExpiresAt = new Date(baseDate.getTime() + 30 * 86400000)
 
     await prisma.user.update({
       where: { id: order.userId },
       data: {
         plan: order.plan,
         subscriptionStatus: 'active',
-        subscriptionExpiresAt: thirtyDaysFromNow,
+        subscriptionExpiresAt: newExpiresAt,
       },
     })
 

@@ -84,8 +84,11 @@ export class TochkaClient implements BankConnector {
         paymentPurpose: op.payment_purpose || op.description || '',
       }))
     } catch (err) {
-      console.warn('Tochka live API failed, fallback to mock if sandbox mode allowed:', err)
-      return this.generateMockStatement(acc, fromDate, toDate)
+      if (this.isSandbox) {
+        console.warn('Tochka sandbox mode fallback to mock:', err)
+        return this.generateMockStatement(acc, fromDate, toDate)
+      }
+      throw new Error(`Tochka statement fetch error: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 

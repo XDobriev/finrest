@@ -12,6 +12,7 @@ import { prisma } from '../../src/lib/db/client'
 import {
   getMenuItemsAction,
   saveMenuItemAction,
+  deleteMenuItemAction,
   getMenuAnalysisAction,
   seedDefaultMenuAction,
 } from '../../src/app/actions/menu'
@@ -160,5 +161,146 @@ test('Menu Server Actions: seed, list, save, and analysis lifecycle', async () =
   } finally {
     await prisma.venue.delete({ where: { id: venue.id } }).catch(() => {})
     await prisma.user.delete({ where: { id: user.id } }).catch(() => {})
+  }
+})
+
+test('Kasavana-Smith: handles zero volume menu without classifying 0-sale items as Stars or Plowhorses', () => {
+  const zeroItems: MenuItemInput[] = [
+    { name: 'Новинка 1', category: 'kitchen', sellingPrice: 1000, standardCost: 200, actualCost: 200, salesVolume: 0 },
+    { name: 'Новинка 2', category: 'kitchen', sellingPrice: 500, standardCost: 400, actualCost: 400, salesVolume: 0 },
+  ]
+
+  const matrix = classifyKasavanaSmith(zeroItems)
+  assert.equal(matrix.get('Новинка 1'), 'puzzle', 'High margin with 0 volume must be puzzle, not star')
+  assert.equal(matrix.get('Новинка 2'), 'dog', 'Low margin with 0 volume must be dog, not plowhorse')
+})
+
+test('ABC Analysis: dominant single item (>80% of revenue) is correctly categorized as A and never left empty', () => {
+  const items: MenuItemInput[] = [
+    { name: 'Стейк Рибай', category: 'kitchen', sellingPrice: 3000, standardCost: 1000, actualCost: 1000, salesVolume: 85 }, // 255k (85%)
+    { name: 'Борщ', category: 'kitchen', sellingPrice: 500, standardCost: 150, actualCost: 150, salesVolume: 60 },          // 30k (10%)
+    { name: 'Кофе', category: 'bar', sellingPrice: 150, standardCost: 30, actualCost: 30, salesVolume: 100 },               // 15k (5%)
+  ]
+
+  const abc = calculateAbc(items)
+  assert.equal(abc.get('Стейк Рибай'), 'A', 'Dominant 85% revenue item must belong to A')
+  assert.equal(abc.get('Борщ'), 'B', 'Secondary item must belong to B')
+  assert.equal(abc.get('Кофе'), 'C', 'Long tail item must belong to C')
+
+  let aCount = 0
+  for (const v of abc.values()) {
+    if (v === 'A') aCount++
+  }
+  assert.ok(aCount > 0, 'Category A must never be empty when total revenue > 0')
+})
+
+test('XYZ Analysis: handles all-zero daily sales safely by assigning Z', () => {
+  const items: MenuItemInput[] = [
+    {
+      name: 'Блюдо без продаж',
+      category: 'kitchen',
+      sellingPrice: 500,
+      standardCost: 150,
+      actualCost: 150,
+      salesVolume: 0,
+      dailySales: [0, 0, 0, 0, 0],
+    },
+  ]
+
+  const xyz = calculateXyz(items)
+  assert.equal(xyz.get('Блюдо без продаж'), 'Z', 'Zero daily sales must evaluate to Z (unpredictable/inactive)')
+})
+
+test('Food Cost Variance: handles zero or negative selling price without explosive percentages', () => {
+  const item: MenuItemInput = {
+    name: 'Комплимент от шефа',
+    category: 'kitchen',
+    sellingPrice: 0,
+    standardCost: 120,
+    actualCost: 150,
+    salesVolume: 40,
+  }
+
+  const res = calculateFoodCostVariance(item)
+  assert.equal(res.standardFoodCostPercent, 0)
+  assert.equal(res.actualFoodCostPercent, 0)
+  assert.equal(res.varianceAmount, (150 - 120) * 40)
+  assert.equal(res.status, 'WARNING')
+})
+
+test('Menu multi-tenancy: prevents accessing or mutating menu items belonging to another user venue', async () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nextHeaders = require('next/headers')
+  const originalCookies = nextHeaders.cookies
+  const { createSessionToken } = await import('../../src/lib/auth/jwt')
+
+  const ownerA = await prisma.user.create({
+    data: { email: `owner_a_${Date.now()}@finrest.ru`, name: 'Owner A' },
+  })
+  const ownerB = await prisma.user.create({
+    data: { email: `owner_b_${Date.now()}@finrest.ru`, name: 'Owner B' },
+  })
+  const venueB = await prisma.venue.create({
+    data: { name: 'Venue B', ownerId: ownerB.id },
+  })
+  const itemB = await prisma.menuItem.create({
+    data: {
+      venueId: venueB.id,
+      name: 'Блюдо Ресторана B',
+      category: 'kitchen',
+      sellingPrice: 500,
+      standardCost: 150,
+      actualCost: 150,
+      salesVolume: 50,
+      period: '2026-11',
+    },
+  })
+
+  const tokenA = await createSessionToken({
+    userId: ownerA.id,
+    email: ownerA.email,
+    role: 'OWNER',
+  })
+
+  try {
+    nextHeaders.cookies = async () => ({
+      get: (name: string) => (name === 'finrest_session' ? { value: tokenA } : undefined),
+      set: () => {},
+      delete: () => {},
+    })
+
+    // User A cannot view items of Venue B
+    const items = await getMenuItemsAction(venueB.id, '2026-11')
+    assert.equal(items.length, 0)
+
+    // User A cannot delete item of Venue B
+    await assert.rejects(
+      async () => {
+        await deleteMenuItemAction(itemB.id)
+      },
+      /Нет прав/
+    )
+
+    // User A cannot save an item into Venue B
+    await assert.rejects(
+      async () => {
+        await saveMenuItemAction(venueB.id, {
+          name: 'Хакнутое блюдо',
+          category: 'kitchen',
+          sellingPrice: 100,
+          standardCost: 20,
+          actualCost: 20,
+          salesVolume: 10,
+        })
+      },
+      /Нет прав/
+    )
+
+  } finally {
+    nextHeaders.cookies = originalCookies
+    await prisma.menuItem.deleteMany({ where: { venueId: venueB.id } })
+    await prisma.venue.delete({ where: { id: venueB.id } })
+    await prisma.user.delete({ where: { id: ownerA.id } })
+    await prisma.user.delete({ where: { id: ownerB.id } })
   }
 })

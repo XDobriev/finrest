@@ -83,8 +83,11 @@ export class TBankClient implements BankConnector {
         paymentPurpose: op.paymentPurpose || op.description || '',
       }))
     } catch (err) {
-      console.warn('T-Bank live API failed, fallback to mock if sandbox mode allowed:', err)
-      return this.generateMockStatement(acc, fromDate, toDate)
+      if (this.isSandbox) {
+        console.warn('T-Bank sandbox mode fallback to mock:', err)
+        return this.generateMockStatement(acc, fromDate, toDate)
+      }
+      throw new Error(`T-Bank statement fetch error: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 

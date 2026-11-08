@@ -55,10 +55,31 @@ export async function testBankAction(
   }
 }
 
+import { getCurrentUserAction } from './auth'
+
+async function verifyVenueAccess(venueId: string): Promise<boolean> {
+  const user = await getCurrentUserAction()
+  if (!user?.userId) return true
+  const venue = await prisma.venue.findUnique({
+    where: { id: venueId },
+    select: { ownerId: true },
+  })
+  if (!venue) return false
+  if (venue.ownerId && venue.ownerId !== user.userId) {
+    return false
+  }
+  return true
+}
+
 export async function connectBankAction(
   venueId: string,
   input: ConnectBankInput
 ): Promise<BankConnectionDto> {
+  const hasAccess = await verifyVenueAccess(venueId)
+  if (!hasAccess) {
+    throw new Error('Нет прав на управление этим заведением')
+  }
+
   const existing = await prisma.bankConnection.findFirst({
     where: {
       venueId,
@@ -111,6 +132,11 @@ export async function connectBankAction(
 export async function getBankConnectionsAction(
   venueId: string
 ): Promise<BankConnectionDto[]> {
+  const hasAccess = await verifyVenueAccess(venueId)
+  if (!hasAccess) {
+    return []
+  }
+
   const list = await prisma.bankConnection.findMany({
     where: { venueId },
     orderBy: { createdAt: 'desc' },
@@ -132,6 +158,17 @@ export async function getBankConnectionsAction(
 export async function disconnectBankAction(
   connectionId: string
 ): Promise<{ success: boolean }> {
+  const conn = await prisma.bankConnection.findUnique({
+    where: { id: connectionId },
+    select: { venueId: true },
+  })
+  if (!conn) throw new Error('Подключение не найдено')
+
+  const hasAccess = await verifyVenueAccess(conn.venueId)
+  if (!hasAccess) {
+    throw new Error('Нет прав на управление этим подключением')
+  }
+
   await prisma.bankConnection.update({
     where: { id: connectionId },
     data: { status: 'disconnected' },
@@ -142,5 +179,18 @@ export async function disconnectBankAction(
 export async function syncBankAction(
   connectionId: string
 ): Promise<BankSyncResult> {
+  const conn = await prisma.bankConnection.findUnique({
+    where: { id: connectionId },
+    select: { venueId: true },
+  })
+  if (!conn) {
+    throw new Error('Подключение не найдено')
+  }
+
+  const hasAccess = await verifyVenueAccess(conn.venueId)
+  if (!hasAccess) {
+    throw new Error('Нет прав на синхронизацию этого заведения')
+  }
+
   return syncBankConnection(connectionId)
 }

@@ -26,7 +26,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useApp } from '@/context/AppContext'
 import { formatCurrency, getSourceColor } from '@/lib/utils'
 import { SOURCE_LABELS, CATEGORY_LABELS } from '@/types'
-import { ArrowUpRight, ArrowDownRight, Search, ChevronLeft, ChevronRight, UploadCloud, RotateCcw } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
+import { ArrowUpRight, ArrowDownRight, Search, ChevronLeft, ChevronRight, UploadCloud, RotateCcw, FileText, Sparkles } from 'lucide-react'
 
 type SortField = 'date' | 'amount' | 'counterparty' | 'source'
 type SortDir = 'asc' | 'desc'
@@ -116,18 +117,50 @@ export default function TransactionsPage() {
     <div>
       <Header title="Транзакции" onMenuToggle={() => {}} />
       <main className="p-6 space-y-4">
-        {/* Summary */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <Badge variant="secondary" className="text-sm font-medium">
-            {filtered.length} записей
-          </Badge>
-          <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">
-            {venueTransactions.filter((t) => t.type === 'income').length} доходов
-          </Badge>
-          <Badge className="bg-red-100 text-red-800 border border-red-300">
-            {venueTransactions.filter((t) => t.type === 'expense').length} расходов
-          </Badge>
-        </div>
+        {venueTransactions.length === 0 && !isLoading ? (
+          <EmptyState
+            icon={<FileText className="h-7 w-7 text-emerald-600" />}
+            title="Нет транзакций в выбранном заведении"
+            description="Загрузите банковскую выписку 1C (.txt), импортируйте продажи из iikoCloud или запустите онбординг с тестовым датасетом."
+            tip="FinRest автоматически категоризирует статьи расходов (продукты, бар, ФОТ, аренда, коммунальные) и сопоставляет дубликаты."
+            checklist={[
+              'Перейдите в раздел «Загрузка» и перетащите файл банковской выписки',
+              'Или подключите автоматическую утреннюю синхронизацию с банком в «Настройках»',
+              'Или откройте интерактивный онбординг для быстрой демонстрации',
+            ]}
+            actions={
+              <>
+                <Link
+                  href="/upload"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 text-sm shadow-xs transition-colors"
+                >
+                  <UploadCloud className="h-4 w-4" />
+                  Загрузить выписку
+                </Link>
+                <Link
+                  href="/onboarding"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 text-sm transition-colors"
+                >
+                  <Sparkles className="h-4 w-4 text-emerald-600" />
+                  Мастер онбординга
+                </Link>
+              </>
+            }
+          />
+        ) : (
+          <>
+            {/* Summary */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Badge variant="secondary" className="text-sm font-medium">
+                {filtered.length} записей
+              </Badge>
+              <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">
+                {venueTransactions.filter((t) => t.type === 'income').length} доходов
+              </Badge>
+              <Badge className="bg-red-100 text-red-800 border border-red-300">
+                {venueTransactions.filter((t) => t.type === 'expense').length} расходов
+              </Badge>
+            </div>
 
         {/* Filters */}
         <Card className="rounded-lg shadow-sm">
@@ -393,6 +426,8 @@ export default function TransactionsPage() {
               </Button>
             </div>
           </div>
+        )}
+          </>
         )}
       </main>
     </div>

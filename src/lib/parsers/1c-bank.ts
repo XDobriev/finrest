@@ -1,5 +1,6 @@
 import { categorizeTransaction, detectTransactionType } from '@/lib/categorizer'
 import type { ParseResult } from './index'
+export type { ParsedRow } from './index'
 
 export interface BankStatement1CMeta {
   formatVersion?: string
@@ -16,6 +17,8 @@ export interface BankStatement1CMeta {
 export interface BankParseResult extends ParseResult {
   meta?: BankStatement1CMeta
 }
+
+export const parse1CBankStatement = parse1CClientBank
 
 export function parse1CClientBank(content: string, venueName?: string): BankParseResult {
   const result: BankParseResult = {

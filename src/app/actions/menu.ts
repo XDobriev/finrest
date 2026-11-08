@@ -13,10 +13,31 @@ export interface MenuAnalysisResult {
   summary: MenuEngineeringSummary
 }
 
+import { getCurrentUserAction } from './auth'
+
+async function verifyVenueAccess(venueId: string): Promise<boolean> {
+  const user = await getCurrentUserAction()
+  if (!user?.userId) return true
+  const venue = await prisma.venue.findUnique({
+    where: { id: venueId },
+    select: { ownerId: true },
+  })
+  if (!venue) return false
+  if (venue.ownerId && venue.ownerId !== user.userId) {
+    return false
+  }
+  return true
+}
+
 export async function getMenuItemsAction(
   venueId: string,
   period = '2026-11'
 ): Promise<MenuItemInput[]> {
+  const hasAccess = await verifyVenueAccess(venueId)
+  if (!hasAccess) {
+    return []
+  }
+
   const items = await prisma.menuItem.findMany({
     where: { venueId, period },
     orderBy: { salesVolume: 'desc' },
@@ -38,6 +59,11 @@ export async function saveMenuItemAction(
   venueId: string,
   input: MenuItemInput
 ): Promise<MenuItemInput> {
+  const hasAccess = await verifyVenueAccess(venueId)
+  if (!hasAccess) {
+    throw new Error('Нет прав на управление меню этого заведения')
+  }
+
   const period = input.period || '2026-11'
 
   let record
@@ -82,6 +108,17 @@ export async function saveMenuItemAction(
 }
 
 export async function deleteMenuItemAction(itemId: string): Promise<{ success: boolean }> {
+  const item = await prisma.menuItem.findUnique({
+    where: { id: itemId },
+    select: { venueId: true },
+  })
+  if (!item) return { success: true }
+
+  const hasAccess = await verifyVenueAccess(item.venueId)
+  if (!hasAccess) {
+    throw new Error('Нет прав на удаление блюда этого заведения')
+  }
+
   await prisma.menuItem.delete({ where: { id: itemId } })
   return { success: true }
 }
@@ -90,6 +127,11 @@ export async function getMenuAnalysisAction(
   venueId: string,
   period = '2026-11'
 ): Promise<MenuAnalysisResult> {
+  const hasAccess = await verifyVenueAccess(venueId)
+  if (!hasAccess) {
+    return analyzeMenu([])
+  }
+
   let items = await getMenuItemsAction(venueId, period)
 
   if (items.length === 0) {
@@ -103,6 +145,10 @@ export async function seedDefaultMenuAction(
   venueId: string,
   period = '2026-11'
 ): Promise<MenuItemInput[]> {
+  const hasAccess = await verifyVenueAccess(venueId)
+  if (!hasAccess) {
+    throw new Error('Нет прав на управление меню этого заведения')
+  }
   const defaultItems = [
     {
       name: 'Стейк Рибай Прайм',

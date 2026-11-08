@@ -8,8 +8,10 @@ import { ProfitChart } from '@/components/dashboard/ProfitChart'
 import { ExpenseDonut } from '@/components/dashboard/ExpenseDonut'
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { useDashboard } from '@/hooks/useDashboard'
+import { useApp } from '@/context/AppContext'
+import { EmptyState } from '@/components/ui/empty-state'
 import { formatCurrency } from '@/lib/utils'
 import {
   RussianRuble,
@@ -20,9 +22,12 @@ import {
   Users,
   UploadCloud,
   FileQuestion,
+  Building2,
+  Sparkles,
 } from 'lucide-react'
 
 export default function DashboardPage() {
+  const { venues } = useApp()
   const { metrics, dailyMetrics, categoryBreakdown, transactions, isLoading } = useDashboard()
 
   const foodCostStatus: 'good' | 'warning' | 'alert' | undefined =
@@ -42,6 +47,45 @@ export default function DashboardPage() {
       : metrics.payrollPercent <= 30
       ? 'warning'
       : 'alert'
+
+  if (!isLoading && venues.length === 0) {
+    return (
+      <div>
+        <Header title="Дашборд" />
+        <main className="p-6">
+          <EmptyState
+            icon={<Building2 className="h-7 w-7 text-emerald-600" />}
+            title="Добро пожаловать в FinRest!"
+            description="Управленческий учет, автоматическое устранение дубликатов оплат и Food Cost аналитика для ресторанов, кафе и баров."
+            checklist={[
+              'Создайте ваше первое заведение или ресторанную сеть',
+              'Подключите интернет-банк (Т-Банк, Точка) или загрузите выписку .txt',
+              'Свяжите Telegram-бота для мгновенного распознавания чеков шеф-повара',
+            ]}
+            tip="Мастер первого запуска за 2 минуты настроит заведение и загрузит тестовый датасет, чтобы вы сразу оценили отчеты ОПиУ, ДДС и экономию от дедупликации."
+            actions={
+              <>
+                <Link
+                  href="/onboarding"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 text-sm shadow-md transition-all hover:scale-[1.02]"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Пройти интерактивный онбординг
+                </Link>
+                <Link
+                  href="/venues"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 text-sm transition-colors"
+                >
+                  <Building2 className="h-4 w-4 text-slate-500" />
+                  Добавить заведение вручную
+                </Link>
+              </>
+            }
+          />
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -142,26 +186,35 @@ export default function DashboardPage() {
             </div>
 
             {transactions.length === 0 ? (
-              <Card className="rounded-xl shadow-sm border-dashed border-2">
-                <CardContent className="p-12 text-center">
-                  <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                    <FileQuestion className="h-6 w-6 text-slate-500" />
-                  </div>
-                  <h3 className="text-base font-semibold text-slate-900 mb-1">
-                    Нет данных за выбранный период
-                  </h3>
-                  <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
-                    Загрузите выписку из банка или данные продаж из iiko, чтобы увидеть полную финансовую аналитику ресторана.
-                  </p>
-                  <Link
-                    href="/upload"
-                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 text-sm shadow-sm transition-colors"
-                  >
-                    <UploadCloud className="h-4 w-4" />
-                    Загрузить выписку
-                  </Link>
-                </CardContent>
-              </Card>
+              <EmptyState
+                icon={<FileQuestion className="h-7 w-7 text-slate-500" />}
+                title="Нет данных за выбранный период"
+                description="Загрузите банковскую выписку, синхронизируйте iikoCloud или используйте тестовые данные, чтобы увидеть финансовую аналитику ресторана."
+                tip="Если вы ведете учет параллельно в iiko и банке, дедупликатор FinRest автоматически предотвратит задвоение выручки эквайринга и накладных."
+                checklist={[
+                  'Загрузите выписку онлайн-банка в формате 1C (.txt) в разделе «Загрузка»',
+                  'Или подключите Т-Банк / Банк Точка в «Настройках» для утренней синхронизации',
+                  'Или откройте мастер онбординга для быстрой загрузки демо-данных',
+                ]}
+                actions={
+                  <>
+                    <Link
+                      href="/upload"
+                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 text-sm shadow-xs transition-colors"
+                    >
+                      <UploadCloud className="h-4 w-4" />
+                      Загрузить выписку
+                    </Link>
+                    <Link
+                      href="/onboarding"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 text-sm transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4 text-emerald-600" />
+                      Мастер онбординга
+                    </Link>
+                  </>
+                }
+              />
             ) : (
               <>
                 {/* Charts */}

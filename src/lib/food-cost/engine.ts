@@ -24,22 +24,33 @@ export function classifyKasavanaSmith(
 
   let totalMargin = 0
   let totalVolume = 0
+  let totalGrossProfit = 0
 
   for (const item of items) {
     const margin = item.sellingPrice - item.standardCost
+    const vol = Math.max(0, item.salesVolume || 0)
     totalMargin += margin
-    totalVolume += item.salesVolume
+    totalVolume += vol
+    totalGrossProfit += margin * vol
   }
 
-  const avgMargin = totalMargin / items.length
+  // Kasavana-Smith standard Contribution Margin threshold:
+  // Weighted Average Contribution Margin (ACM) across items sold.
+  // Fall back to simple average margin if total sold volume is 0.
+  const avgMargin = totalVolume > 0
+    ? totalGrossProfit / totalVolume
+    : totalMargin / items.length
+
   // Standard Kasavana-Smith threshold is 70% of average sales volume per item
-  const volumeHurdle = (totalVolume / items.length) * 0.70
+  const volumeHurdle = totalVolume > 0
+    ? (totalVolume / items.length) * 0.70
+    : 1
 
   for (const item of items) {
     const key = item.id || item.name
     const margin = item.sellingPrice - item.standardCost
     const isHighMargin = margin >= avgMargin
-    const isHighVolume = item.salesVolume >= volumeHurdle
+    const isHighVolume = totalVolume > 0 && item.salesVolume >= volumeHurdle
 
     if (isHighVolume && isHighMargin) {
       result.set(key, 'star')
@@ -63,7 +74,7 @@ export function calculateAbc(
 
   const revenues = items.map((item) => ({
     key: item.id || item.name,
-    revenue: item.sellingPrice * item.salesVolume,
+    revenue: Math.max(0, (item.sellingPrice || 0) * (item.salesVolume || 0)),
   }))
 
   const totalRevenue = revenues.reduce((sum, r) => sum + r.revenue, 0)
@@ -78,13 +89,16 @@ export function calculateAbc(
   revenues.sort((a, b) => b.revenue - a.revenue)
 
   let cumulativeRevenue = 0
-  for (const r of revenues) {
+  for (let i = 0; i < revenues.length; i++) {
+    const r = revenues[i]
+    const prevShare = cumulativeRevenue / totalRevenue
     cumulativeRevenue += r.revenue
-    const share = cumulativeRevenue / totalRevenue
+    const currShare = cumulativeRevenue / totalRevenue
 
-    if (share <= 0.801) {
+    // Top item or items whose starting bracket was < 80% belong to A
+    if (i === 0 || prevShare < 0.80 || currShare <= 0.801) {
       result.set(r.key, 'A')
-    } else if (share <= 0.951) {
+    } else if (prevShare < 0.95 || currShare <= 0.951) {
       result.set(r.key, 'B')
     } else {
       result.set(r.key, 'C')
@@ -119,6 +133,9 @@ export function calculateXyz(
           result.set(key, 'Z')
         }
         continue
+      } else {
+        result.set(key, 'Z')
+        continue
       }
     }
 
@@ -138,11 +155,24 @@ export function calculateXyz(
 export function calculateFoodCostVariance(
   item: MenuItemInput
 ): FoodCostVarianceResult {
-  const price = item.sellingPrice || 1
+  const salesVolume = Math.max(0, item.salesVolume || 0)
+  const price = item.sellingPrice > 0 ? item.sellingPrice : 0
+
+  if (price === 0) {
+    const varianceAmount = (item.actualCost - item.standardCost) * salesVolume
+    return {
+      standardFoodCostPercent: 0,
+      actualFoodCostPercent: 0,
+      variancePercent: 0,
+      varianceAmount,
+      status: varianceAmount > 0 ? 'WARNING' : 'NORMAL',
+    }
+  }
+
   const standardFoodCostPercent = Math.round((item.standardCost / price) * 1000) / 10
   const actualFoodCostPercent = Math.round((item.actualCost / price) * 1000) / 10
   const variancePercent = Math.round((actualFoodCostPercent - standardFoodCostPercent) * 10) / 10
-  const varianceAmount = (item.actualCost - item.standardCost) * item.salesVolume
+  const varianceAmount = (item.actualCost - item.standardCost) * salesVolume
 
   let status: FoodCostVarianceResult['status'] = 'NORMAL'
   if (variancePercent > 5) {

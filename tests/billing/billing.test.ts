@@ -183,3 +183,95 @@ test('YooKassa Webhook Route: processes HTTP POST notification', async () => {
     await prisma.user.delete({ where: { id: user.id } }).catch(() => {})
   }
 })
+
+test('YooKassa Webhook: preserves existing active subscription duration when renewing early', async () => {
+  const futureExpiry = new Date(Date.now() + 25 * 86400000)
+  const user = await prisma.user.create({
+    data: {
+      email: `renewal_${Date.now()}@finrest.ru`,
+      plan: 'START',
+      subscriptionStatus: 'active',
+      subscriptionExpiresAt: futureExpiry,
+    },
+  })
+
+  try {
+    const client = new YooKassaClient({ isSandbox: true })
+    const session = await client.createPayment({
+      userId: user.id,
+      plan: 'BUSINESS',
+      returnUrl: 'https://finrest.ru/pricing',
+    })
+
+    await client.handleWebhook({
+      type: 'notification',
+      event: 'payment.succeeded',
+      object: { id: session.paymentId },
+    })
+
+    const updated = await prisma.user.findUnique({ where: { id: user.id } })
+    assert.ok(updated?.subscriptionExpiresAt)
+
+    const remainingDays = (updated.subscriptionExpiresAt.getTime() - Date.now()) / 86400000
+    // Should be approximately 25 + 30 = 55 days (at least 53 days)
+    assert.ok(
+      remainingDays >= 53,
+      `Prepaid days must be preserved! Expected >= 53 days, got ${remainingDays.toFixed(1)} days`
+    )
+
+  } finally {
+    await prisma.paymentOrder.deleteMany({ where: { userId: user.id } })
+    await prisma.user.delete({ where: { id: user.id } }).catch(() => {})
+  }
+})
+
+test('Plan Limits: atomic transactional lock prevents concurrent venue creation from exceeding subscription limit', async () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nextHeaders = require('next/headers')
+  const originalCookies = nextHeaders.cookies
+  const { createSessionToken } = await import('../../src/lib/auth/jwt')
+  const { createVenueAction } = await import('../../src/app/actions/venues')
+
+  const user = await prisma.user.create({
+    data: {
+      email: `concurrent_limit_${Date.now()}@finrest.ru`,
+      plan: 'START',
+      subscriptionStatus: 'active',
+    },
+  })
+
+  const token = await createSessionToken({
+    userId: user.id,
+    email: user.email,
+    role: 'OWNER',
+  })
+
+  try {
+    nextHeaders.cookies = async () => ({
+      get: (name: string) => (name === 'finrest_session' ? { value: token } : undefined),
+      set: () => {},
+      delete: () => {},
+    })
+
+    // Concurrently invoke createVenueAction twice for a user with START plan (limit 1)
+    const results = await Promise.allSettled([
+      createVenueAction('Параллельное Кафе 1'),
+      createVenueAction('Параллельное Кафе 2'),
+    ])
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled')
+    const rejected = results.filter((r) => r.status === 'rejected')
+
+    // Exactly 1 must succeed and exactly 1 must fail due to plan limit
+    assert.equal(fulfilled.length, 1, 'Only 1 venue creation must succeed')
+    assert.equal(rejected.length, 1, 'The 2nd concurrent creation must be rejected')
+
+    const dbVenues = await prisma.venue.findMany({ where: { ownerId: user.id } })
+    assert.equal(dbVenues.length, 1, 'DB must contain strictly 1 venue adhering to plan limit')
+
+  } finally {
+    nextHeaders.cookies = originalCookies
+    await prisma.venue.deleteMany({ where: { ownerId: user.id } })
+    await prisma.user.delete({ where: { id: user.id } }).catch(() => {})
+  }
+})

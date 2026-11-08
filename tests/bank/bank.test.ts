@@ -178,3 +178,108 @@ test('Bank Server Actions: connect, list, sync, disconnect lifecycle', async () 
     await prisma.user.delete({ where: { id: user.id } }).catch(() => {})
   }
 })
+
+test('T-Bank & Tochka: in production mode (!isSandbox), API error throws and does NOT fallback to mock', async () => {
+  const tbankClient = new TBankClient({
+    token: 'live_invalid_prod_token',
+    isSandbox: false,
+  })
+
+  await assert.rejects(
+    async () => {
+      await tbankClient.getStatement()
+    },
+    /T-Bank statement fetch error/
+  )
+
+  const tochkaClient = new TochkaClient({
+    token: 'live_invalid_prod_token',
+    isSandbox: false,
+  })
+
+  await assert.rejects(
+    async () => {
+      await tochkaClient.getStatement()
+    },
+    /Tochka statement fetch error/
+  )
+})
+
+test('Bank multi-tenancy: prevents other users from accessing, syncing or disconnecting another user bank connection', async () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nextHeaders = require('next/headers')
+  const originalCookies = nextHeaders.cookies
+  const { createSessionToken } = await import('../../src/lib/auth/jwt')
+
+  const userA = await prisma.user.create({
+    data: { email: `bank_tenant_a_${Date.now()}@finrest.ru`, name: 'Bank Owner A' },
+  })
+  const userB = await prisma.user.create({
+    data: { email: `bank_tenant_b_${Date.now()}@finrest.ru`, name: 'Bank Owner B' },
+  })
+  const venueB = await prisma.venue.create({
+    data: { name: 'Venue Bank B', ownerId: userB.id },
+  })
+  const connB = await prisma.bankConnection.create({
+    data: {
+      venueId: venueB.id,
+      bankType: 'TBANK',
+      accountNumber: '40702810111122223333',
+      token: 'secret_token_b',
+      isSandbox: true,
+      status: 'connected',
+    },
+  })
+
+  const tokenA = await createSessionToken({
+    userId: userA.id,
+    email: userA.email,
+    role: 'OWNER',
+  })
+
+  try {
+    nextHeaders.cookies = async () => ({
+      get: (name: string) => (name === 'finrest_session' ? { value: tokenA } : undefined),
+      set: () => {},
+      delete: () => {},
+    })
+
+    // User A cannot list Venue B's connections
+    const conns = await getBankConnectionsAction(venueB.id)
+    assert.equal(conns.length, 0)
+
+    // User A cannot disconnect Venue B's bank
+    await assert.rejects(
+      async () => {
+        await disconnectBankAction(connB.id)
+      },
+      /Нет прав/
+    )
+
+    // User A cannot sync Venue B's bank
+    await assert.rejects(
+      async () => {
+        await syncBankAction(connB.id)
+      },
+      /Нет прав/
+    )
+
+    // User A cannot connect a new bank to Venue B
+    await assert.rejects(
+      async () => {
+        await connectBankAction(venueB.id, {
+          bankType: 'TOCHKA',
+          token: 'token_hacked',
+        })
+      },
+      /Нет прав/
+    )
+
+  } finally {
+    nextHeaders.cookies = originalCookies
+    await prisma.bankConnection.deleteMany({ where: { venueId: venueB.id } })
+    await prisma.venue.delete({ where: { id: venueB.id } })
+    await prisma.user.delete({ where: { id: userA.id } })
+    await prisma.user.delete({ where: { id: userB.id } })
+  }
+})

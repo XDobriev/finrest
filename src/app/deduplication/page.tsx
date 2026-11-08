@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useApp } from '@/context/AppContext'
-import { Search, Copy, Play, CheckCircle2, Clock, Loader2, Zap, Keyboard, UploadCloud } from 'lucide-react'
+import { Search, Copy, Play, CheckCircle2, Clock, Loader2, Zap, Keyboard, UploadCloud, Sparkles } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { EmptyState } from '@/components/ui/empty-state'
 
 export default function DeduplicationPage() {
   const {
@@ -271,43 +272,63 @@ export default function DeduplicationPage() {
             ))}
           </div>
         ) : filteredPairs.length === 0 ? (
-          <Card className="rounded-lg shadow-sm border-dashed">
-            <CardContent className="p-10 text-center">
-              <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <Copy className="h-6 w-6 text-slate-500" />
-              </div>
-              <p className="text-base font-semibold text-slate-900">
-                {venueTransactions.length === 0
-                  ? 'Нет данных для анализа дубликатов'
-                  : 'Нет пар для просмотра'}
-              </p>
-              <p className="text-sm text-slate-600 mt-1 max-w-sm mx-auto mb-4">
-                {venueTransactions.length === 0
-                  ? 'Загрузите банковские выписки или отчёты iiko, чтобы запустить поиск повторяющихся транзакций.'
-                  : hasRun
-                  ? 'Все обнаруженные дубликаты успешно обработаны или совпадающих записей не найдено.'
-                  : 'Нажмите «Найти дубликаты» для анализа транзакций на наличие повторов.'}
-              </p>
-              {venueTransactions.length === 0 ? (
-                <Link
-                  href="/upload"
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 text-sm shadow-sm transition-colors"
-                >
-                  <UploadCloud className="h-4 w-4" />
-                  Загрузить выписку
-                </Link>
-              ) : !hasRun ? (
-                <Button
-                  onClick={handleRunDeduplication}
-                  disabled={isRunning}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white"
-                >
-                  <Search className="h-4 w-4" />
-                  Найти дубликаты
-                </Button>
-              ) : null}
-            </CardContent>
-          </Card>
+          venueTransactions.length === 0 ? (
+            <EmptyState
+              icon={<Copy className="h-7 w-7 text-emerald-600" />}
+              title="Нет данных для анализа дубликатов"
+              description="Чтобы обнаружить задвоение расходов между кассой iiko, выпиской банка и чеками шеф-повара, загрузите операции заведения."
+              tip="В ресторанном бизнесе до 5-8% чистой прибыли теряется из-за повторно проведенных накладных поставщиков (рыба, мясо, сыры) и пересечения эквайринга."
+              checklist={[
+                'Загрузите выписку банка за месяц в формате .txt',
+                'Загрузите кассовые смены iiko или подключите Telegram-бота',
+                'FinRest сопоставит операции с учетом погрешности дат и опечаток в контрагентах',
+              ]}
+              actions={
+                <>
+                  <Link
+                    href="/upload"
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 text-sm shadow-xs transition-colors"
+                  >
+                    <UploadCloud className="h-4 w-4" />
+                    Загрузить выписку
+                  </Link>
+                  <Link
+                    href="/onboarding"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 text-sm transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    Мастер онбординга
+                  </Link>
+                </>
+              }
+            />
+          ) : (
+            <Card className="rounded-lg shadow-sm border-dashed">
+              <CardContent className="p-10 text-center">
+                <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                  <Copy className="h-6 w-6 text-slate-500" />
+                </div>
+                <p className="text-base font-semibold text-slate-900">
+                  Нет пар для просмотра
+                </p>
+                <p className="text-sm text-slate-600 mt-1 max-w-sm mx-auto mb-4">
+                  {hasRun
+                    ? 'Все обнаруженные дубликаты успешно обработаны или совпадающих записей не найдено.'
+                    : 'Нажмите «Найти дубликаты» для анализа транзакций на наличие повторов.'}
+                </p>
+                {!hasRun && (
+                  <Button
+                    onClick={handleRunDeduplication}
+                    disabled={isRunning}
+                    className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white"
+                  >
+                    <Search className="h-4 w-4" />
+                    Найти дубликаты
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )
         ) : (
           <div className="space-y-4">
             {filteredPairs.map((pair) => (

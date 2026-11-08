@@ -24,7 +24,19 @@ import {
   Smartphone,
   ExternalLink,
   CheckCircle2,
+  Sparkles,
+  RotateCcw,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog'
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
+import {
+  getOnboardingStatusAction,
+  resetOnboardingAction,
+  type OnboardingStatus,
+} from '@/app/actions/onboarding'
 import {
   testIikoConnectionAction,
   saveIikoSettingsAction,
@@ -85,6 +97,11 @@ export default function SettingsPage() {
   const [tgAuthData, setTgAuthData] = useState<TelegramAuthTokenResponse | null>(null)
   const [isGeneratingTg, setIsGeneratingTg] = useState(false)
 
+  // Onboarding states
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
+  const [wizardModalOpen, setWizardModalOpen] = useState(false)
+  const [isResettingOnboarding, setIsResettingOnboarding] = useState(false)
+
   // Bank Integration states
   const [bankConnections, setBankConnections] = useState<BankConnectionDto[]>([])
   const [selectedBankType, setSelectedBankType] = useState<'TBANK' | 'TOCHKA'>('TBANK')
@@ -111,6 +128,10 @@ export default function SettingsPage() {
       if (isMounted) setTgStatus(st)
     }).catch(() => {})
 
+    getOnboardingStatusAction().then((st) => {
+      if (isMounted) setOnboardingStatus(st)
+    }).catch(() => {})
+
     if (selectedVenueId) {
       getBankConnectionsAction(selectedVenueId).then((conns) => {
         if (isMounted) setBankConnections(conns)
@@ -121,6 +142,28 @@ export default function SettingsPage() {
       isMounted = false
     }
   }, [selectedVenueId])
+
+  const handleStartTour = () => {
+    setWizardModalOpen(true)
+  }
+
+  const handleResetTour = async () => {
+    setIsResettingOnboarding(true)
+    try {
+      await resetOnboardingAction()
+      localStorage.removeItem('finrest_onboarding_completed')
+      localStorage.removeItem('finrest_onboarding_step')
+      setOnboardingStatus({
+        completed: false,
+        step: 0,
+        hasVenues: venues.length > 0,
+        venueId: selectedVenueId || null,
+      })
+      setWizardModalOpen(true)
+    } finally {
+      setIsResettingOnboarding(false)
+    }
+  }
 
   const handleConnectTelegram = async () => {
     setIsGeneratingTg(true)
@@ -289,6 +332,57 @@ export default function SettingsPage() {
                 <p className="font-semibold text-slate-900">Управляющий партнёр</p>
                 <p className="text-sm text-slate-600 font-mono">admin@finrest.ru</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Interactive Onboarding & Learning Tour */}
+        <Card className="rounded-lg shadow-sm border-emerald-200/90 bg-gradient-to-r from-emerald-50/40 via-white to-white">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-emerald-600" />
+                <CardTitle className="text-base font-semibold text-slate-900">
+                  Интерактивный онбординг и обучение
+                </CardTitle>
+              </div>
+              {onboardingStatus?.completed ? (
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-xs gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Онбординг пройден
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs text-amber-800 bg-amber-50 border-amber-300">
+                  Не завершен
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              Пошаговый тур первого запуска: создание ресторана, выбор источника данных (выписка .txt, iiko, Т-Банк/Точка, демо-данные) и привязка Telegram-бота.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button
+                onClick={handleStartTour}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-9 gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Пройти обучение заново
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleResetTour}
+                disabled={isResettingOnboarding}
+                className="text-xs h-9 gap-1.5 text-slate-700 hover:text-slate-900 border-slate-300"
+              >
+                {isResettingOnboarding ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3.5 w-3.5" />
+                )}
+                Сбросить статус онбординга
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -941,6 +1035,22 @@ export default function SettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Onboarding Wizard Modal */}
+        <Dialog open={wizardModalOpen} onOpenChange={setWizardModalOpen}>
+          <DialogContent className="max-w-3xl p-2 sm:p-4 max-h-[92vh] overflow-y-auto">
+            <OnboardingWizard
+              isModal={true}
+              onComplete={() => {
+                setWizardModalOpen(false)
+                setOnboardingStatus((prev) =>
+                  prev ? { ...prev, completed: true, step: 4 } : null
+                )
+              }}
+              onCancel={() => setWizardModalOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   )

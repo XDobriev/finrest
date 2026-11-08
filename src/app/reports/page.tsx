@@ -18,7 +18,9 @@ import { exportBalanceToExcel } from '@/lib/excel/export-balance'
 import { getBalanceSnapshotAction } from '@/app/actions/balance'
 import { calculateBalanceReportData } from '@/lib/reports/balance'
 import type { BalanceSnapshot } from '@/types'
-import { FileText, FileSpreadsheet } from 'lucide-react'
+import Link from 'next/link'
+import { EmptyState } from '@/components/ui/empty-state'
+import { FileText, FileSpreadsheet, UploadCloud, Sparkles } from 'lucide-react'
 
 export default function ReportsPage() {
   const { transactions, selectedVenueId, venues, dateRange, cashBalances, setCashBalance, isLoading } = useApp()
@@ -92,6 +94,36 @@ export default function ReportsPage() {
                 </div>
                 <Skeleton className="h-14 w-full rounded-lg" />
               </div>
+            ) : transactions.filter((t) => t.venueId === selectedVenueId).length === 0 ? (
+              <EmptyState
+                icon={<FileText className="h-7 w-7 text-emerald-600" />}
+                title="Отчёты будут рассчитаны после загрузки данных"
+                description="ОПиУ (P&L), ДДС (Cash Flow) и Управленческий баланс формируются в реальном времени на основе очищенных от дубликатов транзакций."
+                tip="В отчете ОПиУ выручка очищается от дублирующего эквайринга, а фудкост и ФОТ сравниваются с отраслевыми стандартами (Food Cost ≤ 32%, ФОТ ≤ 25%)."
+                checklist={[
+                  'Загрузите выписку банка за месяц в формате .txt',
+                  'Загрузите кассовые смены iiko или подключите Telegram-бота',
+                  'FinRest автоматически разнесет доходы и расходы по структуре отчетов',
+                ]}
+                actions={
+                  <>
+                    <Link
+                      href="/upload"
+                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 text-sm shadow-xs transition-colors"
+                    >
+                      <UploadCloud className="h-4 w-4" />
+                      Загрузить выписку
+                    </Link>
+                    <Link
+                      href="/onboarding"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium px-4 py-2.5 text-sm transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4 text-emerald-600" />
+                      Мастер онбординга
+                    </Link>
+                  </>
+                }
+              />
             ) : (
               <Tabs defaultValue="opiu">
                 <div className="flex items-center justify-between mb-4">

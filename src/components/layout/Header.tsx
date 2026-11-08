@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/context/AppContext'
-import { Building2, Menu, Calendar, LogOut, User as UserIcon, Check, ChevronDown, Plus } from 'lucide-react'
+import { Building2, Menu, Calendar, LogOut, User as UserIcon, Check, ChevronDown, Plus, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -241,6 +241,18 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
           </PopoverContent>
         </Popover>
 
+
+        {/* Quick Tour / Learning link */}
+        <Link href="/onboarding" title="Пройти интерактивное обучение">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 sm:h-9 px-2 sm:px-2.5 text-xs text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 gap-1.5 transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="hidden lg:inline font-medium">Обучение</span>
+          </Button>
+        </Link>
 
         {pendingPairs > 0 && (
           <Badge className="hidden sm:flex gap-1.5 bg-amber-100 text-amber-950 border border-amber-300 font-medium">

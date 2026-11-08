@@ -41,7 +41,8 @@ export async function getVenueByIdAction(id: string): Promise<Venue | null> {
   }
 }
 
-import { checkVenueLimit } from '@/lib/billing/plans'
+import { PLAN_CONFIG, type SubscriptionPlan } from '@/lib/billing/plans'
+import { prisma } from '@/lib/db/client'
 
 export async function createVenueAction(
   name: string,
@@ -49,16 +50,53 @@ export async function createVenueAction(
 ): Promise<Venue> {
   const user = await getCurrentUserAction()
   if (user?.userId) {
-    const limit = await checkVenueLimit(user.userId)
-    if (!limit.allowed) {
-      throw new Error(limit.message || 'Лимит заведений для вашего тарифного плана исчерпан')
-    }
+    return prisma.$transaction(async (tx) => {
+      // Row-level lock on the user record prevents concurrent creation from exceeding plan limits
+      await tx.$executeRaw`SELECT id FROM "User" WHERE id = ${user.userId} FOR UPDATE`
+
+      const dbUser = await tx.user.findUnique({
+        where: { id: user.userId },
+        include: { venues: true },
+      })
+      const plan = (dbUser?.plan as SubscriptionPlan) || 'START'
+      const config = PLAN_CONFIG[plan] || PLAN_CONFIG.START
+
+      if (dbUser && dbUser.venues.length >= config.venueLimit) {
+        throw new Error(
+          `Лимит тарифа «${config.name}» исчерпан (максимум ${config.venueLimit} ${
+            config.venueLimit === 1 ? 'заведение' : 'заведения'
+          }). Перейдите на более высокий тариф в разделе Подписка.`
+        )
+      }
+
+      const v = await tx.venue.create({
+        data: {
+          name,
+          address,
+          ownerId: user.userId,
+          dateToleranceDays: 1,
+          amountTolerancePercent: 5.0,
+          fuzzyMatchThreshold: 0.7,
+        },
+      })
+
+      return {
+        id: v.id,
+        name: v.name,
+        address: v.address ?? undefined,
+        createdAt: v.createdAt.toISOString(),
+        deduplicationSettings: {
+          dateToleranceDays: v.dateToleranceDays,
+          amountTolerancePercent: v.amountTolerancePercent,
+          fuzzyMatchThreshold: v.fuzzyMatchThreshold,
+        },
+      }
+    })
   }
 
   const v = await createVenue({
     name,
     address,
-    ownerId: user?.userId,
   })
   return {
     id: v.id,
