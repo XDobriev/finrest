@@ -20,6 +20,7 @@ export default function UploadPage() {
     selectedVenueId,
     venues,
     addTransaction,
+    addTransactionsBatch,
     addFileUpload,
     fileUploads,
     runDeduplication,
@@ -43,18 +44,19 @@ export default function UploadPage() {
       const rows = previews[source]
       if (rows.length === 0) continue
 
-      for (const row of rows) {
-        await addTransaction({
-          venueId: selectedVenueId,
-          source,
-          date: row.date,
-          amount: row.amount,
-          type: row.type,
-          category: row.category,
-          counterparty: row.counterparty,
-          description: row.description,
-        })
-      }
+      // Batch insert all rows in 1 single request instead of sequential loop
+      const batchItems = rows.map((row) => ({
+        venueId: selectedVenueId,
+        source,
+        date: row.date,
+        amount: row.amount,
+        type: row.type,
+        category: row.category,
+        counterparty: row.counterparty,
+        description: row.description,
+      }))
+
+      await addTransactionsBatch(batchItems)
 
       addFileUpload({
         venueId: selectedVenueId,
