@@ -19,7 +19,6 @@ export default function UploadPage() {
   const {
     selectedVenueId,
     venues,
-    addTransaction,
     addTransactionsBatch,
     addFileUpload,
     fileUploads,
