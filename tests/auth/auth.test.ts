@@ -37,6 +37,34 @@ test('Auth: JWT token creation and verification', async () => {
   assert.equal(invalid, null)
 })
 
+test('Auth: JWT creation throws in production when JWT_SECRET is missing or under 32 chars', async () => {
+  const origNodeEnv = process.env.NODE_ENV
+  const origSecret = process.env.JWT_SECRET
+
+  try {
+    ;(process.env as Record<string, string | undefined>).NODE_ENV = 'production'
+    delete process.env.JWT_SECRET
+
+    await assert.rejects(
+      async () => {
+        await createSessionToken({
+          userId: 'test-user',
+          email: 'test@finrest.local',
+          role: 'OWNER',
+        })
+      },
+      /JWT_SECRET must be set and at least 32 characters in production/
+    )
+  } finally {
+    ;(process.env as Record<string, string | undefined>).NODE_ENV = origNodeEnv
+    if (origSecret !== undefined) {
+      process.env.JWT_SECRET = origSecret
+    } else {
+      delete process.env.JWT_SECRET
+    }
+  }
+})
+
 test('Auth: database user lifecycle and credentials validation', async () => {
   const testEmail = `test_${Date.now()}@finrest.local`
   const password = 'Password@2026'
