@@ -36,6 +36,11 @@ test('Docker Configuration: validates Nginx reverse-proxy and security headers',
   assert.ok(content.includes('X-Frame-Options'), 'Must include X-Frame-Options header')
   assert.ok(content.includes('X-Content-Type-Options'), 'Must include X-Content-Type-Options header')
   assert.ok(content.includes('gzip on;'), 'Must have gzip compression enabled')
+
+  // Bug 6: Port 443 SSL server block & TLS 1.2/1.3
+  assert.ok(content.includes('listen 443 ssl'), 'Must configure port 443 SSL')
+  assert.ok(content.includes('TLSv1.2 TLSv1.3'), 'Must support TLS 1.2 and TLS 1.3')
+  assert.ok(content.includes('/etc/letsencrypt'), 'Must configure certbot SSL certificates')
 })
 
 test('Deployment Scripts: validates backup and deployment automation', () => {
