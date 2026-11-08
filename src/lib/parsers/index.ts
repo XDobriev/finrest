@@ -20,6 +20,19 @@ export interface ParseResult {
   warnings: string[]
 }
 
+export function decodeTextFile(buffer: ArrayBuffer): string {
+  const utf8Text = new TextDecoder('utf-8').decode(buffer)
+  // If text contains 1CClientBankExchange and does not contain the replacement character, it is valid UTF-8
+  if (utf8Text.includes('1CClientBankExchange') && !utf8Text.includes('\uFFFD')) {
+    return utf8Text
+  }
+  try {
+    return new TextDecoder('windows-1251').decode(buffer)
+  } catch {
+    return utf8Text
+  }
+}
+
 function normalizeDate(value: unknown): string | null {
   if (!value) return null
   if (typeof value === 'number') {

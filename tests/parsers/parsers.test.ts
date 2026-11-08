@@ -3,7 +3,26 @@ import assert from 'node:assert/strict'
 import { categorizeTransaction, detectTransactionType } from '../../src/lib/categorizer'
 import { parse1CClientBank } from '../../src/lib/parsers/1c-bank'
 import * as XLSX from 'xlsx'
-import { parseExcelFile } from '../../src/lib/parsers'
+import { parseExcelFile, decodeTextFile } from '../../src/lib/parsers'
+
+test('1CClientBankExchange Parser: decodeTextFile correctly decodes UTF-8 and Windows-1251', () => {
+  const russianSample = '1CClientBankExchange\nВерсияФормата=1.03\nПлательщик=ООО "Ресторан Оливье"\n'
+  
+  // 1. UTF-8 buffer
+  const utf8Buffer = new TextEncoder().encode(russianSample).buffer
+  const decodedUtf8 = decodeTextFile(utf8Buffer)
+  assert.equal(decodedUtf8, russianSample)
+  assert.ok(!decodedUtf8.includes('\uFFFD'))
+
+  // 2. Windows-1251 buffer
+  // Construct windows-1251 bytes for "1CClientBankExchange\n"
+  const headerBytes = Array.from(Buffer.from('1CClientBankExchange\n'))
+  // In windows-1251, 'О' = 0xCE, 'л' = 0xEB, 'и' = 0xE8, 'в' = 0xE2, 'ь' = 0xFC, 'е' = 0xE5
+  const win1251Bytes = Buffer.from([...headerBytes, 0xCE, 0xEB, 0xE8, 0xE2, 0xFC, 0xE5, 0x0A])
+  const decodedWin1251 = decodeTextFile(win1251Bytes.buffer)
+  assert.ok(decodedWin1251.includes('1CClientBankExchange'))
+  assert.ok(decodedWin1251.includes('Оливье'))
+})
 
 test('Categorizer: accurately classifies restaurant expenses', () => {
   assert.equal(categorizeTransaction('ООО ФудСнаб', 'Поставка мяса и овощей'), 'food')

@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X, Loader2 } from 'lucide-react'
-import { parseExcelFile, parse1CClientBank, type ParseResult } from '@/lib/parsers'
+import { parseExcelFile, parse1CClientBank, decodeTextFile, type ParseResult } from '@/lib/parsers'
 import type { DataSource } from '@/types'
 import { SOURCE_LABELS } from '@/types'
 
@@ -14,18 +14,6 @@ interface FileUploaderProps {
   source: DataSource
   venueName?: string
   onParsed: (result: ParseResult) => void
-}
-
-function decodeTextFile(buffer: ArrayBuffer): string {
-  const utf8Text = new TextDecoder('utf-8').decode(buffer)
-  if (utf8Text.includes('1CClientBankExchange') && !utf8Text.includes('')) {
-    return utf8Text
-  }
-  try {
-    return new TextDecoder('windows-1251').decode(buffer)
-  } catch {
-    return utf8Text
-  }
 }
 
 export function FileUploader({ source, venueName, onParsed }: FileUploaderProps) {
