@@ -70,7 +70,6 @@ export class TochkaClient implements BankConnector {
       }
 
       const data = await res.json()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ops = data.payments || data.transactions || []
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return ops.map((op: any) => ({
