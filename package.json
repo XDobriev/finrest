@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test tests/**/*.test.ts",
+    "test:benchmark": "tsx --test tests/benchmarks/deduplication-stress.test.ts",
+    "generate:data": "tsx scripts/generate-synthetic-data.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
