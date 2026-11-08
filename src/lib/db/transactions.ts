@@ -141,27 +141,32 @@ export async function resolveDeduplicationPair(
   }
 
   if (action === 'merge') {
-    // Mark right transaction as duplicate of left
-    await prisma.transaction.update({
-      where: { id: pair.rightTxId },
-      data: { status: 'duplicate', duplicateOfId: pair.leftTxId },
-    })
+    // Atomically mark right transaction as duplicate and update pair status
+    return prisma.$transaction(async (tx) => {
+      await tx.transaction.update({
+        where: { id: pair.rightTxId },
+        data: { status: 'duplicate', duplicateOfId: pair.leftTxId },
+      })
 
-    return prisma.deduplicationPair.update({
-      where: { id: pairId },
-      data: { status: 'merged', resolvedAt: new Date() },
+      return tx.deduplicationPair.update({
+        where: { id: pairId },
+        data: { status: 'merged', resolvedAt: new Date() },
+      })
     })
   }
 
   if (action === 'unmerge') {
-    await prisma.transaction.update({
-      where: { id: pair.rightTxId },
-      data: { status: 'unique', duplicateOfId: null },
-    })
+    // Atomically restore right transaction to unique and update pair status
+    return prisma.$transaction(async (tx) => {
+      await tx.transaction.update({
+        where: { id: pair.rightTxId },
+        data: { status: 'unique', duplicateOfId: null },
+      })
 
-    return prisma.deduplicationPair.update({
-      where: { id: pairId },
-      data: { status: 'pending', resolvedAt: null },
+      return tx.deduplicationPair.update({
+        where: { id: pairId },
+        data: { status: 'pending', resolvedAt: null },
+      })
     })
   }
 
