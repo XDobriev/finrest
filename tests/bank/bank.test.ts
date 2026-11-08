@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { prisma } from '../../src/lib/db/client'
 import { TBankClient } from '../../src/lib/bank/tbank-client'
 import { TochkaClient } from '../../src/lib/bank/tochka-client'
-import { syncBankConnection, syncAllActiveBankConnections } from '../../src/lib/bank/sync'
+import { syncBankConnection } from '../../src/lib/bank/sync'
 import {
   connectBankAction,
   getBankConnectionsAction,
@@ -86,6 +86,7 @@ test('Bank Sync Pipeline: imports transactions and triggers auto-matching with i
         status: 'unique',
       },
     })
+    assert.ok(iikoTx.id)
 
     // 2. Connect T-Bank for this venue
     const connection = await prisma.bankConnection.create({
