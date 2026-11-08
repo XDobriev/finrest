@@ -41,11 +41,20 @@ export async function getVenueByIdAction(id: string): Promise<Venue | null> {
   }
 }
 
+import { checkVenueLimit } from '@/lib/billing/plans'
+
 export async function createVenueAction(
   name: string,
   address?: string
 ): Promise<Venue> {
   const user = await getCurrentUserAction()
+  if (user?.userId) {
+    const limit = await checkVenueLimit(user.userId)
+    if (!limit.allowed) {
+      throw new Error(limit.message || 'Лимит заведений для вашего тарифного плана исчерпан')
+    }
+  }
+
   const v = await createVenue({
     name,
     address,
