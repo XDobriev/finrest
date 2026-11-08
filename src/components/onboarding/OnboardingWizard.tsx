@@ -96,8 +96,8 @@ export function OnboardingWizard({
           if (!status.completed && status.step > 1 && status.step <= 4) {
             setStep(status.step)
           }
-          if (status.venueId && !activeVenueId) {
-            setActiveVenueId(status.venueId)
+          if (status.venueId) {
+            setActiveVenueId((prev) => prev || status.venueId)
           }
         })
         .catch(() => {})
