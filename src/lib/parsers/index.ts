@@ -183,7 +183,7 @@ export function parseExcelFile(
         txType = detectTransactionType(`${counterpartyVal} ${descVal}`, amountVal, false)
       }
 
-      const category = txType === 'income' ? 'food' : categorizeTransaction(counterpartyVal, descVal)
+      const category = txType === 'income' ? 'other' : categorizeTransaction(counterpartyVal, descVal)
 
       result.rows.push({
         date: dateVal,

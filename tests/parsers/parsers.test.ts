@@ -39,7 +39,13 @@ test('Categorizer: accurately classifies restaurant expenses', () => {
 test('Categorizer: detects income vs expense', () => {
   assert.equal(detectTransactionType('Выручка по эквайрингу за смену', 125000, true), 'income')
   assert.equal(detectTransactionType('Поступление выручки от покупателей', 80000, false), 'income')
+  assert.equal(detectTransactionType('Возмещение по операциям эквайринга', 450000, false), 'income')
   assert.equal(detectTransactionType('Оплата поставщику за зелень', 12000, false), 'expense')
+  
+  // Bug 5: Acquiring bank fees must be classified as expense, not income
+  assert.equal(detectTransactionType('Комиссия банка за эквайринг по договору 123', 2500, false), 'expense')
+  assert.equal(detectTransactionType('Удержание комиссии за услуги эквайринга', 1800, false), 'expense')
+  assert.equal(detectTransactionType('Комиссия за расчетно-кассовое обслуживание', 1200, false), 'expense')
 })
 
 test('1CClientBankExchange Parser: parses bank statement text correctly', () => {

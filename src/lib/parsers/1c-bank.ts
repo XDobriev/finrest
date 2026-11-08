@@ -92,7 +92,7 @@ export function parse1CClientBank(content: string, venueName?: string): BankPars
 
       const txType = detectTransactionType(description, amount, isIncome)
       const counterparty = txType === 'income' ? payer : recipient
-      const category = txType === 'income' ? 'food' : categorizeTransaction(counterparty, description)
+      const category = txType === 'income' ? 'other' : categorizeTransaction(counterparty, description)
 
       result.rows.push({
         date: normalizedDate,

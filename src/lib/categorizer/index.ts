@@ -186,6 +186,22 @@ export function detectTransactionType(
   if (isRecipientOurVenue) return 'income'
 
   const lowerDesc = description.toLowerCase()
+
+  // Guard: bank commissions and deductions are always expenses, even if mentioning acquiring/terminals
+  const feeKeywords = [
+    'комисс',
+    'удержан',
+    'списан',
+    'плата за',
+    'тариф',
+    'обслуживан',
+    'ррб',
+    'инкассац',
+  ]
+  if (feeKeywords.some((kw) => lowerDesc.includes(kw))) {
+    return 'expense'
+  }
+
   const incomeKeywords = [
     'выручк',
     'эквайринг',
@@ -193,6 +209,8 @@ export function detectTransactionType(
     'оплата от покупател',
     'терминал',
     'возврат от поставщик',
+    'зачислени',
+    'возмещени',
   ]
 
   for (const kw of incomeKeywords) {
@@ -201,5 +219,5 @@ export function detectTransactionType(
     }
   }
 
-  return amount < 0 ? 'expense' : 'expense'
+  return 'expense'
 }
