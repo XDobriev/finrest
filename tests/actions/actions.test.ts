@@ -7,10 +7,11 @@ import {
 } from '../../src/app/actions/venues'
 import {
   getTransactionsAction,
+  getTransactionByIdAction,
   createTransactionAction,
   deleteTransactionAction,
 } from '../../src/app/actions/transactions'
-import { runDeduplicationAction } from '../../src/app/actions/deduplication'
+import { runDeduplicationAction, resolveDeduplicationPairAction } from '../../src/app/actions/deduplication'
 import {
   getInventoryItemsAction,
   createInventoryItemAction,
@@ -123,6 +124,15 @@ test('Server Actions: deduplication detects duplicate income transactions (e.g. 
     assert.ok(matched, 'Deduplication must detect matching income transactions')
     assert.equal(matched.leftTransaction.type, 'income')
     assert.equal(matched.rightTransaction.type, 'income')
+
+    // Test atomic merge
+    const res = await resolveDeduplicationPairAction(matched.id, 'merge')
+    assert.equal(res.success, true)
+
+    // Verify right transaction is now duplicate
+    const rightUpdated = await getTransactionByIdAction(matched.rightTransaction.id)
+    assert.equal(rightUpdated?.status, 'duplicate')
+    assert.equal(rightUpdated?.duplicateOfId, matched.leftTransaction.id)
   } finally {
     await deleteTransactionAction(inc1.id)
     await deleteTransactionAction(inc2.id)
