@@ -20,7 +20,6 @@ import {
   InventoryItem,
   CashBalances,
 } from '@/types'
-import { mockVenues, mockTransactions, mockDeduplicationPairs } from '@/data/mock'
 import { generateId } from '@/lib/utils'
 import {
   getVenuesAction,
@@ -120,15 +119,13 @@ function getDefaultDateRange(): DateRange {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [venues, setVenues] = useState<Venue[]>(mockVenues)
+  const [venues, setVenues] = useState<Venue[]>([])
   const [selectedVenueId, setSelectedVenueId] = useLocalStorage<string>(
     'finrest_selected_venue',
-    mockVenues[0]?.id || ''
+    ''
   )
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions)
-  const [deduplicationPairs, setDeduplicationPairs] = useState<DeduplicationPair[]>(
-    mockDeduplicationPairs
-  )
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [deduplicationPairs, setDeduplicationPairs] = useState<DeduplicationPair[]>([])
   const [fileUploads, setFileUploads] = useLocalStorage<FileUpload[]>(
     'finrest_file_uploads',
     []
@@ -189,6 +186,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               ...prev,
               [activeVenueId]: dbCash,
             }))
+          }
+        } else {
+          if (isMounted) {
+            setVenues([])
+            setSelectedVenueId('')
+            setTransactions([])
+            setDeduplicationPairs([])
+            setInventory([])
           }
         }
       } catch (err) {
@@ -528,16 +533,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ]
   )
 
-  const resetAllData = useCallback(() => {
-    setVenues(mockVenues)
-    setSelectedVenueId(mockVenues[0].id)
-    setTransactions(mockTransactions)
-    setDeduplicationPairs(mockDeduplicationPairs)
+  const resetAllData = useCallback(async () => {
+    try {
+      const dbVenues = await getVenuesAction()
+      if (dbVenues && dbVenues.length > 0) {
+        setVenues(dbVenues)
+        setSelectedVenueId(dbVenues[0].id)
+        const [dbTxs, dbPairs, dbInventory, dbCash] = await Promise.all([
+          getTransactionsAction(dbVenues[0].id),
+          getDeduplicationPairsAction(dbVenues[0].id),
+          getInventoryItemsAction(dbVenues[0].id),
+          getCashBalancesAction(dbVenues[0].id),
+        ])
+        setTransactions(dbTxs)
+        setDeduplicationPairs(dbPairs)
+        setInventory(dbInventory)
+        setCashBalances({ [dbVenues[0].id]: dbCash })
+      } else {
+        setVenues([])
+        setSelectedVenueId('')
+        setTransactions([])
+        setDeduplicationPairs([])
+        setInventory([])
+        setCashBalances({})
+      }
+    } catch {
+      setVenues([])
+      setSelectedVenueId('')
+      setTransactions([])
+      setDeduplicationPairs([])
+      setInventory([])
+      setCashBalances({})
+    }
     setFileUploads([])
     setDeduplicationLog([])
     setDateRange(getDefaultDateRange())
-    setCashBalances({})
-    setInventory([])
   }, [
     setSelectedVenueId,
     setDateRange,
