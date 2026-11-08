@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,8 +11,13 @@ import { useReportOPiU } from '@/hooks/useReportOPiU'
 import { useReportDDS } from '@/hooks/useReportDDS'
 import { OPiUReport } from '@/components/reports/OPiUReport'
 import { DDSReport } from '@/components/reports/DDSReport'
+import { BalanceReport } from '@/components/reports/BalanceReport'
 import { exportOPiUToExcel } from '@/lib/excel/export-opiu'
 import { exportDDSToExcel } from '@/lib/excel/export-dds'
+import { exportBalanceToExcel } from '@/lib/excel/export-balance'
+import { getBalanceSnapshotAction } from '@/app/actions/balance'
+import { calculateBalanceReportData } from '@/lib/reports/balance'
+import type { BalanceSnapshot } from '@/types'
 import { FileText, FileSpreadsheet } from 'lucide-react'
 
 export default function ReportsPage() {
@@ -26,6 +31,32 @@ export default function ReportsPage() {
   const ddsData = useReportDDS(transactions, selectedVenueId, dateRange, cashBalances)
 
   const monthKey = dateRange.from.substring(0, 7)
+
+  const [balanceSnapshot, setBalanceSnapshot] = useState<BalanceSnapshot | null>(null)
+
+  const isBalanceLoading =
+    !balanceSnapshot ||
+    balanceSnapshot.venueId !== selectedVenueId ||
+    balanceSnapshot.monthKey !== monthKey
+
+  useEffect(() => {
+    if (!selectedVenueId) return
+    let cancelled = false
+
+    getBalanceSnapshotAction(selectedVenueId, monthKey)
+      .then((snap) => {
+        if (!cancelled) {
+          setBalanceSnapshot(snap)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load balance snapshot:', err)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedVenueId, monthKey])
 
   return (
     <div>
@@ -67,6 +98,7 @@ export default function ReportsPage() {
                   <TabsList>
                     <TabsTrigger value="opiu">ОПиУ (P&L)</TabsTrigger>
                     <TabsTrigger value="dds">ДДС</TabsTrigger>
+                    <TabsTrigger value="balance">Баланс (Управленческий)</TabsTrigger>
                   </TabsList>
                 </div>
 
@@ -102,6 +134,53 @@ export default function ReportsPage() {
                         Скачать ДДС (Excel)
                       </Button>
                     </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="balance">
+                  <div className="space-y-4">
+                    {isBalanceLoading || !balanceSnapshot ? (
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Skeleton className="h-28 w-full rounded-lg" />
+                          <Skeleton className="h-28 w-full rounded-lg" />
+                          <Skeleton className="h-28 w-full rounded-lg" />
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <Skeleton className="h-64 w-full rounded-lg" />
+                          <Skeleton className="h-64 w-full rounded-lg" />
+                        </div>
+                        <Skeleton className="h-16 w-full rounded-lg" />
+                      </div>
+                    ) : (
+                      <>
+                        <BalanceReport
+                          key={`${balanceSnapshot.venueId}-${balanceSnapshot.monthKey}-${balanceSnapshot.updatedAt}`}
+                          initialSnapshot={balanceSnapshot}
+                          monthlyOpex={opiuData.operatingExpenses.total}
+                          venueName={venueName}
+                          period={period}
+                          onSnapshotSaved={(snap) => setBalanceSnapshot(snap)}
+                        />
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={() => {
+                              const reportData = calculateBalanceReportData({
+                                snapshot: balanceSnapshot,
+                                monthlyOpex: opiuData.operatingExpenses.total,
+                                venueName,
+                                period,
+                              })
+                              exportBalanceToExcel(reportData, venueName, monthKey)
+                            }}
+                            className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white"
+                          >
+                            <FileSpreadsheet className="h-4 w-4" />
+                            Скачать Баланс (Excel)
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
