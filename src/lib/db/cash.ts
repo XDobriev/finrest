@@ -13,6 +13,18 @@ export async function getCashBalances(venueId: string): Promise<Record<string, n
   return result
 }
 
+export async function getCashBalance(venueId: string, monthKey: string): Promise<number> {
+  const record = await prisma.cashBalance.findUnique({
+    where: {
+      venueId_monthKey: {
+        venueId,
+        monthKey,
+      },
+    },
+  })
+  return record?.amount ?? 0
+}
+
 export async function upsertCashBalance(
   venueId: string,
   monthKey: string,

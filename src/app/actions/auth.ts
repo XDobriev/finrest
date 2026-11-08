@@ -162,14 +162,20 @@ export async function getCurrentUserAction(): Promise<SessionPayload | null> {
     const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
     if (!sessionToken) {
-      // In local dev/demo mode, if no session cookie yet, fallback to default seed user
-      const defaultUser = await prisma.user.findFirst()
-      if (defaultUser) {
-        return {
-          userId: defaultUser.id,
-          email: defaultUser.email,
-          role: defaultUser.role as 'OWNER' | 'MANAGER' | 'ACCOUNTANT',
-          name: defaultUser.name,
+      // Insecure fallback removed: unauthenticated requests must default to null.
+      // Demo/mock fallback is only permitted if explicitly enabled in development mode.
+      if (
+        process.env.NODE_ENV === 'development' &&
+        process.env.ALLOW_DEV_FALLBACK_AUTH === 'true'
+      ) {
+        const defaultUser = await prisma.user.findFirst()
+        if (defaultUser) {
+          return {
+            userId: defaultUser.id,
+            email: defaultUser.email,
+            role: defaultUser.role as 'OWNER' | 'MANAGER' | 'ACCOUNTANT',
+            name: defaultUser.name,
+          }
         }
       }
       return null
